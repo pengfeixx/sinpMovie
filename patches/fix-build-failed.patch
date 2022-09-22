@@ -1,0 +1,108 @@
+diff --git a/examples/test/CMakeLists.txt b/examples/test/CMakeLists.txt
+index 3f0ad46e..c1b532b4 100644
+--- a/examples/test/CMakeLists.txt
++++ b/examples/test/CMakeLists.txt
+@@ -7,7 +7,7 @@ set(CMD_NAME dmr_test)
+ set(CMAKE_CXX_FLAGS "-std=c++1y -fpermissive -Wno-error")
+ 
+ include_directories(${CMAKE_INCLUDE_CURRENT_DIR})
+-
++include_directories(/runtime/include)
+ find_package(Qt5Widgets)
+ find_package(Qt5Concurrent)
+ find_package(Qt5Network)
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 6bc3dbc3..5d5e284b 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -9,7 +9,7 @@ add_definitions(-D_MOVIE_USE_)
+ 
+ include_directories(${CMAKE_INCLUDE_CURRENT_DIR})
+ include_directories(${CMAKE_CURRENT_BINARY_DIR})
+-
++include_directories(/runtime/include)
+ find_package(Qt5Widgets)
+ find_package(Qt5DBus)
+ find_package(Qt5X11Extras)
+@@ -96,11 +96,11 @@ install(FILES ${PROJECT_SOURCE_DIR}/assets/resources/icons/logo-big.svg
+ install(DIRECTORY ${CMAKE_SOURCE_DIR}/assets/deepin-movie DESTINATION /usr/share/deepin-manual/manual-assets/application/)
+ 
+ #匹配mpris差异
+-execute_process(COMMAND dpkg -s libmpris-qt5-1 COMMAND grep -i version COMMAND cut -d\  -f2 OUTPUT_VARIABLE libmprisVersion)
+-message(${libmprisVersion})
+-if( ${libmprisVersion} MATCHES "0.1.0-" )
+-    add_definitions(-D_LIBMPR_)
+-endif()
++#execute_process(COMMAND dpkg -s libmpris-qt5-1 COMMAND grep -i version COMMAND cut -d\  -f2 OUTPUT_VARIABLE libmprisVersion)
++#message(${libmprisVersion})
++#if( ${libmprisVersion} MATCHES "0.1.0-" )
++#    add_definitions(-D_LIBMPR_)
++#endif()
+ 
+ # 加速编译优化参数
+ if (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "mips64")
+diff --git a/src/libdmr/CMakeLists.txt b/src/libdmr/CMakeLists.txt
+index 535a2332..b48d7db0 100644
+--- a/src/libdmr/CMakeLists.txt
++++ b/src/libdmr/CMakeLists.txt
+@@ -9,7 +9,6 @@ remove_definitions(-D_MOVIE_USE_)
+ pkg_check_modules(Gst REQUIRED IMPORTED_TARGET gstreamer-1.0 glib-2.0)
+ 
+ include_directories(${CMAKE_INCLUDE_CURRENT_DIR})
+-
+ file(GLOB_RECURSE SRCS LIST_DIRECTORIES false *.cpp)
+ file(GLOB_RECURSE MPV_SRCS LIST_DIRECTORIES false ../backends/mpv/*.cpp)
+ file(GLOB_RECURSE MEDIAPLAYER_SRCS LIST_DIRECTORIES false ../backends/mediaplayer/*.cpp)
+diff --git a/src/libdmr/compositing_manager.cpp b/src/libdmr/compositing_manager.cpp
+index fbe14bda..13977bbe 100644
+--- a/src/libdmr/compositing_manager.cpp
++++ b/src/libdmr/compositing_manager.cpp
+@@ -264,22 +264,35 @@ bool CompositingManager::isCanHwdec()
+     return m_bCanHwdec;
+ }
+ 
+-QString  CompositingManager::libPath(const QString &sLib)
++QString  CompositingManager::libPath(const QString &strlib)
+ {
+-    QDir dir;
+-    QString path  = QLibraryInfo::location(QLibraryInfo::LibrariesPath);
+-    dir.setPath(path);
+-    QStringList list = dir.entryList(QStringList() << (sLib + "*"), QDir::NoDotAndDotDot | QDir::Files); //filter name with strlib
+-    if (list.contains(sLib)) {
+-        return (path+ QDir::separator() + sLib);
+-    } else {
+-        list.sort();
++    QDir  dir;
++    QStringList environment = QProcess::systemEnvironment();
++    QString str, t_str;
++    foreach (str, environment) {
++        if (str.startsWith("LD_LIBRARY_PATH=")) {
++            t_str = str;
++            break;
++        }
+     }
+-
+-    if(list.size() > 0)
+-        return (path + QDir::separator() + list.last());
+-    else
++    if (t_str.isEmpty()) {
+         return QString();
++    }
++    qDebug() << t_str;
++    QStringList liststr = t_str.split("=").at(1).split(":");
++    QStringList t_list;
++    QString t_libPath;
++    for (size_t i = 0; i < liststr.count() ; i++) {
++        QString path  = liststr.at(i);
++        dir.setPath(path);
++        QStringList list = dir.entryList(QStringList() << (strlib + "*"), QDir::NoDotAndDotDot | QDir::Files); //filter name with strlib
++        if (!list.isEmpty()) {
++            t_libPath = path + "/" + list.first();
++            break;
++        }
++    }
++    qDebug() << t_libPath;
++    return t_libPath;
+ }
+ 
+ void CompositingManager::setCanHwdec(bool bCanHwdec)
