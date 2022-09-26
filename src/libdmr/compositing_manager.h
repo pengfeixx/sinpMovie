@@ -101,10 +101,12 @@ public:
 #if defined (_LIBDMR_)
         return true;
 #endif
+//        return false;
         return _composited;
     }
     Platform platform() const
     {
+//        return Platform::Arm64;
         return _platform;
     }
 

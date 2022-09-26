@@ -1070,8 +1070,8 @@ void Platform_ToolboxProxy::setup()
     _mid->addWidget(m_pVolBtn);
 
     m_pPrevBtn->setIcon(QIcon::fromTheme("dcc_last", QIcon(":/icons/deepin/builtin/light/normal/last_normal.svg")));
-    m_pPrevBtn->setIconSize(QSize(36, 36));
-    m_pPrevBtn->setFixedSize(36, 36);
+    m_pPrevBtn->setIconSize(QSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH));
+    m_pPrevBtn->setFixedSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH);
     m_pPrevBtn->setObjectName(PREV_BUTTON);
     m_pPrevBtn->setAccessibleName(PREV_BUTTON);
     m_pPrevBtn->setFocusPolicy(Qt::TabFocus);
@@ -1080,8 +1080,8 @@ void Platform_ToolboxProxy::setup()
     list.append(m_pPrevBtn);
 
     m_pPlayBtn->setIcon(QIcon::fromTheme("dcc_play", QIcon(":/icons/deepin/builtin/light/normal/play_normal.svg")));
-    m_pPlayBtn->setIconSize(QSize(36, 36));
-    m_pPlayBtn->setFixedSize(36, 36);
+    m_pPlayBtn->setIconSize(QSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH));
+    m_pPlayBtn->setFixedSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH);
     m_pPlayBtn->setFocusPolicy(Qt::TabFocus);
     m_pPlayBtn->setObjectName(PLAY_BUTTON);
     m_pPlayBtn->setAccessibleName(PLAY_BUTTON);
@@ -1090,8 +1090,8 @@ void Platform_ToolboxProxy::setup()
     list.append(m_pPlayBtn);
 
     m_pNextBtn->setIcon(QIcon::fromTheme("dcc_next", QIcon(":/icons/deepin/builtin/light/normal/next_normal.svg")));
-    m_pNextBtn->setIconSize(QSize(36, 36));
-    m_pNextBtn->setFixedSize(36, 36);
+    m_pNextBtn->setIconSize(QSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH));
+    m_pNextBtn->setFixedSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH);
     m_pNextBtn->setFocusPolicy(Qt::TabFocus);
     m_pNextBtn->setObjectName(NEXT_BUTTON);
     m_pNextBtn->setAccessibleName(NEXT_BUTTON);
@@ -1100,7 +1100,7 @@ void Platform_ToolboxProxy::setup()
     list.append(m_pNextBtn);
 
     m_pVolBtn->installEventFilter(this);
-    m_pVolBtn->setFixedSize(35, 35);
+    m_pVolBtn->setFixedSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH);
     m_pVolBtn->setFocusPolicy(Qt::TabFocus);
     m_pVolBtn->setObjectName(VOLUME_BUTTON);
     m_pVolBtn->setAccessibleName(VOLUME_BUTTON);
@@ -1127,8 +1127,8 @@ void Platform_ToolboxProxy::setup()
     m_pFullScreenBtn->setAccessibleName(FS_BUTTON);
     m_pFullScreenBtn->setFocusPolicy(Qt::TabFocus);
     m_pFullScreenBtn->setIcon(QIcon::fromTheme("dcc_zoomin"));
-    m_pFullScreenBtn->setIconSize(QSize(36, 36));
-    m_pFullScreenBtn->setFixedSize(50, 50);
+    m_pFullScreenBtn->setIconSize(QSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH));
+    m_pFullScreenBtn->setFixedSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH);
     m_pFullScreenBtn->initToolTip();
     connect(m_pFullScreenBtn, SIGNAL(clicked()), signalMapper, SLOT(map()));
     signalMapper->setMapping(m_pFullScreenBtn, "fs");
@@ -1142,9 +1142,9 @@ void Platform_ToolboxProxy::setup()
 
     m_pListBtn = new ToolButton(m_pBotToolWgt);
     m_pListBtn->setIcon(QIcon::fromTheme("dcc_episodes"));
-    m_pListBtn->setIconSize(QSize(36, 36));
+    m_pListBtn->setIconSize(QSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH));
     m_pListBtn->setFocusPolicy(Qt::TabFocus);
-    m_pListBtn->setFixedSize(50, 50);
+    m_pListBtn->setFixedSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH);
     m_pListBtn->initToolTip();
     m_pListBtn->setCheckable(true);
     m_pListBtn->setObjectName(PLAYLIST_BUTTON);
@@ -2160,17 +2160,11 @@ void Platform_ToolboxProxy::resizeEvent(QResizeEvent *event)
             m_pPaClose->setDuration(0);
         }
         //使偏移位置与初始化偏移的位置相同
-        int widthOffset = 0;
-        if (m_pPlaylist && m_pPlaylist->state() == Platform_PlaylistWidget::State::Opened && m_bAnimationFinash == true) {
-            QRect r(widthOffset, m_pMainWindow->height() - (TOOLBOX_SPACE_HEIGHT + TOOLBOX_HEIGHT + 7) - m_pMainWindow->rect().top() - widthOffset,
-                    m_pMainWindow->rect().width() - 10, (TOOLBOX_SPACE_HEIGHT + TOOLBOX_HEIGHT + 7));
-            this->setGeometry(r);
-        } else if (m_pPlaylist && m_pPlaylist->state() == Platform_PlaylistWidget::State::Closed && m_bAnimationFinash == true) {
-            QRect r(widthOffset, m_pMainWindow->height() - TOOLBOX_HEIGHT - m_pMainWindow->rect().top() - widthOffset,
-                    m_pMainWindow->rect().width() - 10, TOOLBOX_HEIGHT);
+        if (m_pPlaylist && m_bAnimationFinash == true) {
+            QRect r(0, m_pMainWindow->height() - TOOLBOX_HEIGHT - TOOLBOX_TOP_EXTENT,
+                    m_pMainWindow->rect().width() - TOOLBOX_TOP_EXTENT, TOOLBOX_HEIGHT + TOOLBOX_TOP_EXTENT);
             this->setGeometry(r);
         }
-
         updateTimeLabel();
     }
     DFloatingWidget::resizeEvent(event);

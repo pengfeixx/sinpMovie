@@ -1980,6 +1980,7 @@ void MainWindow::requestAction(ActionFactory::ActionKind actionKind, bool bFromU
             if (m_pFullScreenTimeLable && !isFullScreen()) {
                 m_pFullScreenTimeLable->close();
             }
+            m_pTitlebar->toggleFullscreen(false);
         } else {
             if (utils::check_wayland_env()) {
                 m_pToolbox->setVolSliderHide();
@@ -2003,6 +2004,7 @@ void MainWindow::requestAction(ActionFactory::ActionKind actionKind, bool bFromU
                 }
             }
         }
+        m_pTitlebar->toggleFullscreen(true);
         if (!bFromUI) {
             reflectActionToUI(actionKind);
         }
@@ -2807,7 +2809,8 @@ void MainWindow::resumeToolsWindow()
 
     if (!m_bMiniMode) {
         if (!m_bTouchChangeVolume) {
-            m_pTitlebar->setVisible(!isFullScreen());
+//            m_pTitlebar->setVisible(!isFullScreen());
+            m_pTitlebar->setVisible(true);
             m_pToolbox->show();
         } else {
             m_pToolbox->hide();

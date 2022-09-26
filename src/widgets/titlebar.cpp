@@ -37,6 +37,7 @@
 
 #include <QtGui>
 #include <DThemeManager>
+#include <DWindowCloseButton>
 #include <QPainterPath>
 #include "../accessibility/ac-deepin-movie-define.h"
 
@@ -123,6 +124,15 @@ void Titlebar::setIcon(QPixmap& mp)
 {
     Q_D(const Titlebar);
     d->m_titlebar->setIcon(mp);
+}
+
+void Titlebar::toggleFullscreen(bool isFullscreen)
+{
+    Q_D(Titlebar);
+    d->m_titlebar->setMenuVisible(!isFullscreen);
+    d->m_titlebar->setFullScreenButtonVisible(!isFullscreen);
+    DWindowCloseButton *closeBtn = d->m_titlebar->findChild<DWindowCloseButton*>("DTitlebarDWindowCloseButton");
+    closeBtn->setVisible(!isFullscreen);
 }
 
 void Titlebar::slotThemeTypeChanged()

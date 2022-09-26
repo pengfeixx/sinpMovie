@@ -81,6 +81,8 @@ public:
      * @param mp 图标
      */
     void setIcon(QPixmap& mp);
+
+    void toggleFullscreen(bool);
 public slots:
 	//把lambda表达式改为槽函数，modify by myk
     /**

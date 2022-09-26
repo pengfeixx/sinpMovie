@@ -167,14 +167,14 @@ void VolumeSlider::popup()
     QRect view_rect = main_rect.marginsRemoved(QMargins(1, 1, 1, 1));
 
     int x = TOOLBOX_BUTTON_WIDTH * 3 + (TOOLBOX_BUTTON_WIDTH - VOLSLIDER_WIDTH) / 2 + 20;
-    int y = view_rect.height() - TOOLBOX_HEIGHT - VOLSLIDER_HEIGHT;
+    int y = view_rect.height() - TOOLBOX_HEIGHT - VOLSLIDER_HEIGHT - TOOLBOX_TOP_EXTENT;
     QRect end(x, y, VOLSLIDER_WIDTH, VOLSLIDER_HEIGHT);
     QRect start = end;
 
     start.setWidth(start.width() + 12);
     start.setHeight(start.height() + 10);
     if(CompositingManager::get().platform() == Platform::X86) {
-        start.moveTo(start.topLeft() - QPoint(6, 10));
+        start.moveTo(start.topLeft() - QPoint(6, 20));
     } else {
         end.moveTo(m_point + QPoint(6, 0));
         start.moveTo(m_point - QPoint(0, 14));

@@ -161,7 +161,7 @@ void Platform_VolumeSlider::updatePoint(QPoint point)
 {
     QRect main_rect = _mw->rect();
     QRect view_rect = main_rect.marginsRemoved(QMargins(1, 1, 1, 1));
-    m_point = point + QPoint(TOOLBOX_BUTTON_WIDTH * 3 + (TOOLBOX_BUTTON_WIDTH - VOLSLIDER_WIDTH) / 2 + 20,
+    m_point = point + QPoint((TOOLBOX_BUTTON_WIDTH + TOOLBOX_LAYOUT_SPACING) * 3 + (TOOLBOX_BUTTON_WIDTH - VOLSLIDER_WIDTH) / 2,
                              view_rect.height() - TOOLBOX_HEIGHT - VOLSLIDER_HEIGHT);
 }
 void Platform_VolumeSlider::popup()
@@ -169,7 +169,7 @@ void Platform_VolumeSlider::popup()
     QRect main_rect = _mw->rect();
     QRect view_rect = main_rect.marginsRemoved(QMargins(1, 1, 1, 1));
 
-    int x = TOOLBOX_BUTTON_WIDTH * 3 + (TOOLBOX_BUTTON_WIDTH - VOLSLIDER_WIDTH) / 2 + 20;
+    int x = (TOOLBOX_BUTTON_WIDTH + TOOLBOX_LAYOUT_SPACING) * 3 + (TOOLBOX_BUTTON_WIDTH - VOLSLIDER_WIDTH) / 2;
     int y = view_rect.height() - TOOLBOX_HEIGHT - VOLSLIDER_HEIGHT;
     y += 10;
     QRect end(x, y, VOLSLIDER_WIDTH, VOLSLIDER_HEIGHT);
@@ -177,8 +177,8 @@ void Platform_VolumeSlider::popup()
 
     start.setWidth(start.width() + 12);
     start.setHeight(start.height() + 10);
-    end.moveTo(m_point + QPoint(6, 0));
-    start.moveTo(m_point - QPoint(0, 14));
+    end.moveTo(m_point - QPoint(10, 0));
+    start.moveTo(m_point - QPoint(10, 14));
 
     //动画未完成，等待动画结束后再隐藏控件
     if (pVolAnimation) {

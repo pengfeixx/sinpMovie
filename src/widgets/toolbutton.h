@@ -47,6 +47,7 @@
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QPushButton>
+#include <DToolButton>
 
 DWIDGET_USE_NAMESPACE
 
@@ -305,11 +306,11 @@ private:
     bool m_bIsWM {false};
 };
 
-class ToolButton: public DIconButton
+class ToolButton: public DToolButton
 {
     Q_OBJECT
 public:
-    explicit ToolButton(QWidget *parent = nullptr): DIconButton(parent) {}
+    explicit ToolButton(QWidget *parent = nullptr): DToolButton(parent) {}
     virtual ~ToolButton() {}
 
     void initToolTip()

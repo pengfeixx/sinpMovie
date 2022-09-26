@@ -1138,7 +1138,7 @@ void ToolboxProxy::setup()
 
     m_pPrevBtn->setIcon(QIcon::fromTheme("dcc_last", QIcon(":/icons/deepin/builtin/light/normal/last_normal.svg")));
     m_pPrevBtn->setIconSize(QSize(36, 36));
-    m_pPrevBtn->setFixedSize(36, 36);
+    m_pPrevBtn->setFixedSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH);
     m_pPrevBtn->setObjectName(PREV_BUTTON);
     m_pPrevBtn->setAccessibleName(PREV_BUTTON);
     m_pPrevBtn->setFocusPolicy(Qt::TabFocus);
@@ -1148,7 +1148,7 @@ void ToolboxProxy::setup()
 
     m_pPlayBtn->setIcon(QIcon::fromTheme("dcc_play", QIcon(":/icons/deepin/builtin/light/normal/play_normal.svg")));
     m_pPlayBtn->setIconSize(QSize(36, 36));
-    m_pPlayBtn->setFixedSize(36, 36);
+    m_pPlayBtn->setFixedSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH);
     m_pPlayBtn->setFocusPolicy(Qt::TabFocus);
     m_pPlayBtn->setObjectName(PLAY_BUTTON);
     m_pPlayBtn->setAccessibleName(PLAY_BUTTON);
@@ -1158,7 +1158,7 @@ void ToolboxProxy::setup()
 
     m_pNextBtn->setIcon(QIcon::fromTheme("dcc_next", QIcon(":/icons/deepin/builtin/light/normal/next_normal.svg")));
     m_pNextBtn->setIconSize(QSize(36, 36));
-    m_pNextBtn->setFixedSize(36, 36);
+    m_pNextBtn->setFixedSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH);
     m_pNextBtn->setFocusPolicy(Qt::TabFocus);
     m_pNextBtn->setObjectName(NEXT_BUTTON);
     m_pNextBtn->setAccessibleName(NEXT_BUTTON);
@@ -1195,7 +1195,7 @@ void ToolboxProxy::setup()
     m_pFullScreenBtn->setFocusPolicy(Qt::TabFocus);
     m_pFullScreenBtn->setIcon(QIcon::fromTheme("dcc_zoomin"));
     m_pFullScreenBtn->setIconSize(QSize(36, 36));
-    m_pFullScreenBtn->setFixedSize(50, 50);
+    m_pFullScreenBtn->setFixedSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH);
     m_pFullScreenBtn->initToolTip();
     connect(m_pFullScreenBtn, SIGNAL(clicked()), signalMapper, SLOT(map()));
     signalMapper->setMapping(m_pFullScreenBtn, "fs");
@@ -1211,7 +1211,7 @@ void ToolboxProxy::setup()
     m_pListBtn->setIcon(QIcon::fromTheme("dcc_episodes"));
     m_pListBtn->setIconSize(QSize(36, 36));
     m_pListBtn->setFocusPolicy(Qt::TabFocus);
-    m_pListBtn->setFixedSize(50, 50);
+    m_pListBtn->setFixedSize(TOOLBOX_BUTTON_WIDTH, TOOLBOX_BUTTON_WIDTH);
     m_pListBtn->initToolTip();
     m_pListBtn->setCheckable(true);
     m_pListBtn->setObjectName(PLAYLIST_BUTTON);

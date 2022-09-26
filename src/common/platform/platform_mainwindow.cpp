@@ -2751,13 +2751,13 @@ void Platform_MainWindow::updateProxyGeometry()
         }
 
         if (m_pToolbox) {
-            QRect rfs = QRect(5, height() - TOOLBOX_HEIGHT + TOOLBOX_TOP_EXTENT - rect().top() - 5,
+            QRect rfs = QRect(0, height() - TOOLBOX_HEIGHT + TOOLBOX_TOP_EXTENT - rect().top(),
                         rect().width() - 10, TOOLBOX_HEIGHT + TOOLBOX_TOP_EXTENT);
             m_pToolbox->setGeometry(rfs);
         }
 
         if (m_pPlaylist && !m_pPlaylist->toggling()) {
-            QRect fixed(view_rect.width() - m_pPlaylist->width() - 10, 76, 344, view_rect.height() - 138);
+            QRect fixed(view_rect.width() - m_pPlaylist->width() - 10, 60, 344, view_rect.height() - 138);
             m_pPlaylist->setGeometry(fixed);
         }
     }
