@@ -275,14 +275,14 @@ QPixmap MakeRoundedPixmap(QPixmap pm, qreal rx, qreal ry, int rotation)
 
 QPixmap MakeRoundedPixmap(QSize sz, QPixmap pm, qreal rx, qreal ry, qint64 time)
 {
-    int nX = 0;
-    int nY = 0;
+    int nX = (sz.width() - pm.width()) / 2;
+    int nY = (sz.height() - pm.height()) / 2;
     auto dpr = pm.devicePixelRatio();
     QPixmap dest(sz);
     dest.setDevicePixelRatio(dpr);
     dest.fill(Qt::transparent);
 
-    auto scaled_rect = QRectF({0, 0}, QSizeF(dest.size() / dpr));
+    auto scaled_rect = QRectF(QPoint(nX, nY), QSizeF(pm.size() / dpr));
 
     QPainter p(&dest);
     p.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
@@ -294,11 +294,10 @@ QPixmap MakeRoundedPixmap(QSize sz, QPixmap pm, qreal rx, qreal ry, qint64 time)
     auto r = scaled_rect.marginsRemoved({1, 1, 1, 1});
     path.addRoundedRect(r, rx, ry);
     p.setClipPath(path);
-    nX = (sz.width() - pm.width()) / 2;
-    nY = (sz.height() - pm.height()) / 2;
     p.drawPixmap(nX, nY, pm);
 
 
+#if 0
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
     QFont ft;
     ft.setPixelSize(12);
@@ -325,6 +324,7 @@ QPixmap MakeRoundedPixmap(QSize sz, QPixmap pm, qreal rx, qreal ry, qint64 time)
         pp.addText(bounding.bottomLeft(), ft, tm_str);
         p.fillPath(pp, QColor(Qt::white));
     }
+#endif
 
     return dest;
 }
