@@ -679,13 +679,14 @@ public:
     {
         QPixmap rounded;
         if (m_bIsWM) {
-            rounded = utils::MakeRoundedPixmap(pm, 4, 4, rotation);
+            rounded = utils::MakeRoundedPixmap(pm, 4, 4, secs, rotation);
         } else {
             rounded = pm;
         }
 
-        if (rounded.width() == 0)
-            return;
+//        if (rounded.width() == 0)
+//            return;
+
         if (rounded.width() > rounded.height()) {
             static int roundedH = static_cast<int>(
                                       (static_cast<double>(m_thumbnailFixed)
@@ -1426,16 +1427,17 @@ void ToolboxProxy::updateHoverPreview(const QUrl &url, int secs)
 
     if (m_pProgBar->isVisible()) {
         nPosition = (secs * m_pProgBar->slider()->width()) / nDuration;
-        showPoint = m_pProgBar->mapToGlobal(QPoint(nPosition, TOOLBOX_TOP_EXTENT - 10));
+        showPoint = m_pProgBar->mapToGlobal(QPoint(nPosition, -TOOLBOX_TOP_EXTENT));
     } else {
         nPosition = secs * m_pViewProgBar->getViewLength() / nDuration + m_pViewProgBar->getStartPoint();
-        showPoint = m_pViewProgBar->mapToGlobal(QPoint(nPosition, TOOLBOX_TOP_EXTENT - 10));
+        showPoint = m_pViewProgBar->mapToGlobal(QPoint(nPosition, -TOOLBOX_TOP_EXTENT));
     }
 
     QPixmap pm = ThumbnailWorker::get().getThumb(url, secs);
 
 
     if (!pm.isNull()) {
+//        QPoint point { showPoint.x(), mapToGlobal(geometry().topLeft()).y() - 4 };
         QPoint point { showPoint.x(), showPoint.y() };
         m_pPreviewer->updateWithPreview(pm, secs, m_pEngine->videoRotation());
         m_pPreviewer->updateWithPreview(point);
@@ -1891,11 +1893,12 @@ void ToolboxProxy::progressHoverChanged(int nValue)
 
     if (m_pProgBar->isVisible()) {
         nPosition = (nValue * m_pProgBar->slider()->width()) / nDuration;
-        point = m_pProgBar->mapToGlobal(QPoint(nPosition, TOOLBOX_TOP_EXTENT - 10));
+        point = m_pProgBar->mapToGlobal(QPoint(nPosition, -TOOLBOX_TOP_EXTENT));
     } else {
         nPosition = nValue * m_pViewProgBar->getViewLength() / nDuration + m_pViewProgBar->getStartPoint();
-        point = m_pViewProgBar->mapToGlobal(QPoint(nPosition, TOOLBOX_TOP_EXTENT - 10));
+        point = m_pViewProgBar->mapToGlobal(QPoint(nPosition, -TOOLBOX_TOP_EXTENT));
     }
+//    point.setY(mapToGlobal(geometry().topLeft()).y() - 4);
     m_pPreviewer->updateWithPreview(point);
     if(CompositingManager::isMpvExists()) {
         ThumbnailWorker::get().requestThumb(pif.url, nValue);

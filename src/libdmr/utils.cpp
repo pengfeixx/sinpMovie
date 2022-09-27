@@ -242,6 +242,43 @@ QString FullFileHash(const QFileInfo &fi)
     return QString(QCryptographicHash::hash(bytes, QCryptographicHash::Md5).toHex());
 }
 
+QPixmap MakeRoundedPixmap(QPixmap pm, qreal rx, qreal ry, qint64 time, int rotation)
+{
+    QString timeString = utils::Time2str(time);
+
+    QMatrix matrix;
+    matrix.rotate(rotation);
+    pm = pm.transformed(matrix, Qt::SmoothTransformation);
+
+    auto dpr = pm.devicePixelRatio();
+    QPixmap dest(pm.size());
+    dest.setDevicePixelRatio(dpr);
+
+    auto scaled_rect = QRectF({0, 0}, QSizeF(dest.size() / dpr));
+    dest.fill(Qt::transparent);
+
+    QPainter p(&dest);
+    p.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
+
+    QPainterPath path;
+    path.addRoundedRect(QRect(QPoint(), scaled_rect.size().toSize()), rx, ry);
+    p.setClipPath(path);
+    p.drawPixmap(scaled_rect.toRect(), pm);
+
+    QPainterPath timePath;
+    QRect timeRect(0, scaled_rect.height() - 30, scaled_rect.width(), 30);
+    timePath.addRoundedRect(timeRect, rx, ry);
+    QLinearGradient linear(QPointF(scaled_rect.width() / 2, scaled_rect.height() - 30), QPointF(scaled_rect.width() / 2, scaled_rect.height()));
+    linear.setColorAt(0, Qt::transparent);
+    linear.setColorAt(1, QColor(0, 0, 0, 0.3 * 255));
+    p.fillPath(timePath, linear);
+
+    p.setPen(QPen(Qt::white));
+    p.drawText(timeRect, Qt::AlignCenter, timeString);
+
+    return dest;
+}
+
 QPixmap MakeRoundedPixmap(QPixmap pm, qreal rx, qreal ry, int rotation)
 {
     QMatrix matrix;
@@ -287,8 +324,8 @@ QPixmap MakeRoundedPixmap(QSize sz, QPixmap pm, qreal rx, qreal ry, qint64 time)
     QPainter p(&dest);
     p.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
 
-    p.setPen(QColor(0, 0, 0, 255 / 10));
-    p.drawRoundedRect(scaled_rect, rx, ry);
+//    p.setPen(QColor(0, 0, 0, 255 / 10));
+//    p.drawRoundedRect(scaled_rect, rx, ry);
 
     QPainterPath path;
     auto r = scaled_rect.marginsRemoved({1, 1, 1, 1});
