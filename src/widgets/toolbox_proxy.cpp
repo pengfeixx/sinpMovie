@@ -684,8 +684,8 @@ public:
             rounded = pm;
         }
 
-//        if (rounded.width() == 0)
-//            return;
+        if (rounded.width() == 0)
+            return;
 
         if (rounded.width() > rounded.height()) {
             static int roundedH = static_cast<int>(
@@ -1437,8 +1437,8 @@ void ToolboxProxy::updateHoverPreview(const QUrl &url, int secs)
 
 
     if (!pm.isNull()) {
-//        QPoint point { showPoint.x(), mapToGlobal(geometry().topLeft()).y() - 4 };
         QPoint point { showPoint.x(), showPoint.y() };
+        point.setY(mapToGlobal(QPoint(0, -TOOLBOX_TOP_EXTENT)).y());
         m_pPreviewer->updateWithPreview(pm, secs, m_pEngine->videoRotation());
         m_pPreviewer->updateWithPreview(point);
     }
@@ -1898,7 +1898,7 @@ void ToolboxProxy::progressHoverChanged(int nValue)
         nPosition = nValue * m_pViewProgBar->getViewLength() / nDuration + m_pViewProgBar->getStartPoint();
         point = m_pViewProgBar->mapToGlobal(QPoint(nPosition, -TOOLBOX_TOP_EXTENT));
     }
-//    point.setY(mapToGlobal(geometry().topLeft()).y() - 4);
+    point.setY(mapToGlobal(QPoint(0, -TOOLBOX_TOP_EXTENT)).y());
     m_pPreviewer->updateWithPreview(point);
     if(CompositingManager::isMpvExists()) {
         ThumbnailWorker::get().requestThumb(pif.url, nValue);

@@ -629,7 +629,7 @@ public:
     {
         QPixmap rounded;
         if (m_bIsWM) {
-            rounded = utils::MakeRoundedPixmap(pm, 4, 4, rotation);
+            rounded = utils::MakeRoundedPixmap(pm, 4, 4, secs, rotation);
         } else {
             rounded = pm;
         }
@@ -1345,28 +1345,24 @@ void Platform_ToolboxProxy::updateHoverPreview(const QUrl &url, int secs)
         return;
     }
 
-    int nPosition = 0;
     qint64 nDuration = m_pEngine->duration();
-    QPoint showPoint;
 
     if(nDuration<=0)
     {
         return;
     }
 
+    int nPosition = 0;
     if (m_pProgBar->isVisible()) {
         nPosition = (secs * m_pProgBar->slider()->width()) / nDuration;
-        showPoint = m_pProgBar->mapToGlobal(QPoint(nPosition, TOOLBOX_TOP_EXTENT - 10));
     } else {
         nPosition = secs * m_pViewProgBar->getViewLength() / nDuration + m_pViewProgBar->getStartPoint();
-        showPoint = m_pViewProgBar->mapToGlobal(QPoint(nPosition, TOOLBOX_TOP_EXTENT - 10));
     }
-
+    QPoint showPoint = m_pViewProgBar->mapToGlobal(QPoint(nPosition, 0));
     QPixmap pm = Platform_ThumbnailWorker::get().getThumb(url, secs);
 
-
     if (!pm.isNull()) {
-        QPoint point { showPoint.x(), showPoint.y() };
+        QPoint point { showPoint.x(), mapToGlobal(QPoint(0, -(TOOLBOX_TOP_EXTENT + 4))).y() };
         m_pPreviewer->updateWithPreview(pm, secs, m_pEngine->videoRotation());
         m_pPreviewer->updateWithPreview(point);
     }
@@ -1785,11 +1781,11 @@ void Platform_ToolboxProxy::progressHoverChanged(int nValue)
 
     if (m_pProgBar->isVisible()) {
         nPosition = (nValue * m_pProgBar->slider()->width()) / nDuration;
-        point = m_pProgBar->mapToGlobal(QPoint(nPosition, TOOLBOX_TOP_EXTENT - 10));
     } else {
         nPosition = nValue * m_pViewProgBar->getViewLength() / nDuration + m_pViewProgBar->getStartPoint();
-        point = m_pViewProgBar->mapToGlobal(QPoint(nPosition, TOOLBOX_TOP_EXTENT - 10));
     }
+    point = m_pViewProgBar->mapToGlobal(QPoint(nPosition, 0));
+    point.setY(mapToGlobal(QPoint(0, -(TOOLBOX_TOP_EXTENT + 4))).y());
     m_pPreviewer->updateWithPreview(point);
     Platform_ThumbnailWorker::get().requestThumb(pif.url, nValue);
 }
