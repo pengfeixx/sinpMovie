@@ -304,23 +304,24 @@ public:
         //传入进度条，以便重新获取胶片进度条长度 by ZhuYuliang
         this->m_pProgBar = m_pProgBar;
         _parent = parent;
-        setFixedHeight(70);
+        setFixedHeight(TOOLBOX_HEIGHT);
+        setContentsMargins(0, 0, 0, 0);
 
         m_bIsBlockSignals = false;
         setMouseTracking(true);
 
         m_pBack = new QWidget(this);
-        m_pBack->setFixedHeight(60);
+        m_pBack->setFixedHeight(50);
         m_pBack->setFixedWidth(this->width());
         m_pBack->setContentsMargins(0, 0, 0, 0);
 
         m_pFront = new QWidget(this);
-        m_pFront->setFixedHeight(60);
+        m_pFront->setFixedHeight(50);
         m_pFront->setFixedWidth(0);
         m_pFront->setContentsMargins(0, 0, 0, 0);
 
         m_pIndicator = new IndicatorItem(this);
-        m_pIndicator->resize(6, 60);
+        m_pIndicator->resize(5, 52);
         m_pIndicator->setObjectName("indicator");
 
         m_pSliderTime = new SliderTime;
@@ -350,11 +351,11 @@ public:
         m_pIndicator->setMouseTracking(true);
 
         m_pViewProgBarLayout = new QHBoxLayout(m_pBack);
-        m_pViewProgBarLayout->setContentsMargins(0, 5, 0, 5);
+        m_pViewProgBarLayout->setContentsMargins(0, 0, 0, 0);
         m_pBack->setLayout(m_pViewProgBarLayout);
 
         m_pViewProgBarLayout_black = new QHBoxLayout(m_pFront);
-        m_pViewProgBarLayout_black->setContentsMargins(0, 5, 0, 5);
+        m_pViewProgBarLayout_black->setContentsMargins(0, 0, 0, 0);
         m_pFront->setLayout(m_pViewProgBarLayout_black);
     }
 //    virtual ~ViewProgBar();
@@ -415,19 +416,19 @@ public:
         /*这段代码将胶片添加到两个label中，一个label置灰，一个彩色，通过光标调整两个label的位置
          *以实现通过光标来显示播放过的位置
          */
-        const int nPixWidget = 40/*m_pProgBar->width() / 100*/;
+        const int nPixWidget = 42/*m_pProgBar->width() / 100*/;
         m_nViewLength = (nPixWidget + 1) * pmList.count() - 1;
         m_nStartPoint = (m_pProgBar->width() - m_nViewLength) / 2; //开始位置
         for (int i = 0; i < pmList.count(); i++) {
             ImageItem *label = new ImageItem(pmList.at(i), false, m_pBack);
             label->setMouseTracking(true);
             label->move(i * (nPixWidget + 1) + m_nStartPoint, 5);
-            label->setFixedSize(nPixWidget, 50);
+            label->setFixedSize(nPixWidget, 42);
 
             ImageItem *label_black = new ImageItem(pmBlackList.at(i), true, m_pFront);
             label_black->setMouseTracking(true);
             label_black->move(i * (nPixWidget + 1) + m_nStartPoint, 5);
-            label_black->setFixedSize(nPixWidget, 50);
+            label_black->setFixedSize(nPixWidget, 42);
         }
         update();
     }
@@ -453,7 +454,7 @@ public:
         // 清除状态时还原初始显示状态
         m_bPress = false;
         m_pIndicator->setPressed(m_bPress);
-        m_pIndicator->resize(6, 60);
+        m_pIndicator->resize(5, 52);
     }
 
     int getViewLength()
@@ -473,11 +474,11 @@ private:
 
         if (press) {
             m_pIndicator->setPressed(press);
-            m_pIndicator->resize(2, 60);
+            m_pIndicator->resize(2, 52);
 
         } else {
             m_pIndicator->setPressed(press);
-            m_pIndicator->resize(6, 60);
+            m_pIndicator->resize(5, 52);
         }
     }
 
@@ -997,10 +998,11 @@ void ToolboxProxy::setup()
     THEME_TYPE(type);
     connect(DApplicationHelper::instance(), &DApplicationHelper::themeTypeChanged, this, &ToolboxProxy::slotThemeTypeChanged);
 
-    bot_widget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+//    bot_widget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    bot_widget->setFixedHeight(TOOLBOX_HEIGHT);
     QVBoxLayout *botv = new QVBoxLayout(bot_widget);
     botv->setContentsMargins(0, 0, 0, 0);
-    botv->setSpacing(10);
+    botv->setSpacing(0);
 
     m_pBotSpec = new QWidget(bot_widget);
     m_pBotSpec->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
@@ -1081,7 +1083,7 @@ void ToolboxProxy::setup()
     bot_layout->addLayout(time);
     time->addWidget(m_pTimeLabel);
     QHBoxLayout *progBarspec = new QHBoxLayout(m_pBotToolWgt);
-    progBarspec->setContentsMargins(0, 5, 0, 0);
+    progBarspec->setContentsMargins(0, 2, 0, 0);
     progBarspec->setSpacing(0);
     progBarspec->setAlignment(Qt::AlignHCenter);
 
