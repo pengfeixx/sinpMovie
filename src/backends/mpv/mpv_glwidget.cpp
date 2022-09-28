@@ -876,7 +876,7 @@ namespace dmr {
 
                 pGLFunction->glDisable(GL_BLEND);
             }
-#ifdef __x86_64__
+#if 0
             QWidget *topWidget = topLevelWidget();
             if(topWidget && (topWidget->isFullScreen())) {//全屏状态播放时更新显示进度
                 QString time_text = QTime::currentTime().toString("hh:mm");
@@ -990,7 +990,7 @@ namespace dmr {
 
         }
     }
-#ifdef __x86_64__
+#if 0
     void MpvGLWidget::updateMovieProgress(qint64 duration, qint64 pos)
     {
         if (pos > duration)

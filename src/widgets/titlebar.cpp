@@ -126,15 +126,6 @@ void Titlebar::setIcon(QPixmap& mp)
     d->m_titlebar->setIcon(mp);
 }
 
-void Titlebar::toggleFullscreen(bool isFullscreen)
-{
-    Q_D(Titlebar);
-    d->m_titlebar->setMenuVisible(!isFullscreen);
-    d->m_titlebar->setFullScreenButtonVisible(!isFullscreen);
-    DWindowCloseButton *closeBtn = d->m_titlebar->findChild<DWindowCloseButton*>("DTitlebarDWindowCloseButton");
-    closeBtn->setVisible(!isFullscreen);
-}
-
 void Titlebar::slotThemeTypeChanged()
 {
     Q_D(const Titlebar);
@@ -261,5 +252,67 @@ void Titlebar::paintEvent(QPaintEvent *pe)
     pp.addRect(rect());
     painter.fillPath(pp, bgColor);
 }
+
+FullScreenTitlebar::FullScreenTitlebar(QWidget *parent)
+    :QFrame(parent)
+{
+    setFixedHeight(50);
+
+    QHBoxLayout *mainLayout = new QHBoxLayout;
+    mainLayout->setAlignment(Qt::AlignCenter);
+    mainLayout->setContentsMargins(4, 0, 30, 0);
+    setLayout(mainLayout);
+
+    m_iconLabel = new DLabel;
+    m_iconLabel->setFixedSize(50, 50);
+    m_iconLabel->setContentsMargins(18, 18, 18, 18);
+    QIcon icon = QIcon::fromTheme("deepin-movie");
+    QPixmap logo = icon.pixmap(QSize(32, 32));
+    m_iconLabel->setPixmap(logo);
+
+    m_textLabel = new DLabel;
+    m_textLabel->setFixedHeight(height());
+    m_textLabel->setAlignment(Qt::AlignCenter);
+
+    m_timeLabel = new DLabel;
+    m_timeLabel->setFixedHeight(height());
+    m_timeLabel->setAlignment(Qt::AlignCenter);
+
+    QPalette pa = m_textLabel->palette();
+    pa.setColor(QPalette::WindowText,Qt::white);
+    m_textLabel->setPalette(pa);
+    m_timeLabel->setPalette(pa);
+
+    mainLayout->addWidget(m_iconLabel);
+    mainLayout->addStretch();
+    mainLayout->addWidget(m_textLabel);
+    mainLayout->addStretch();
+    mainLayout->addWidget(m_timeLabel);
+}
+
+void FullScreenTitlebar::setTitletxt(const QString &sTitle)
+{
+    m_textLabel->setText(sTitle);
+}
+
+void FullScreenTitlebar::setTime(const QString &sTime)
+{
+    m_timeLabel->setText(sTime);
+}
+
+void FullScreenTitlebar::paintEvent(QPaintEvent *pPaintEvent)
+{
+    QString sTimeText = QTime::currentTime().toString("hh:mm");
+    setTime(sTimeText);
+
+    QPainter p(this);
+    QPainterPath path;
+    path.addRect(rect());
+    QLinearGradient linear(QPointF(rect().width() / 2, 0), QPointF(rect().width() / 2, rect().height()));
+    linear.setColorAt(0, QColor(0, 0, 0, 0.3 * 255));
+    linear.setColorAt(1, Qt::transparent);
+    p.fillPath(path, linear);
+}
+
 }
 

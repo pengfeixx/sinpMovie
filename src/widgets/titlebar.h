@@ -40,10 +40,29 @@
 #include <DLabel>
 #include <QGraphicsDropShadowEffect>
 #include <DFontSizeManager>
+#include <QTimer>
 
 DWIDGET_USE_NAMESPACE
 
 namespace dmr {
+class FullScreenTitlebar : public QFrame
+{
+    Q_OBJECT
+public:
+    FullScreenTitlebar(QWidget *parent = 0);
+
+    void setTitletxt(const QString &sTitle);
+    void setTime(const QString &sTime);
+
+protected:
+    void paintEvent(QPaintEvent *pPaintEvent) override;
+
+private:
+    DLabel     *m_iconLabel;
+    DLabel     *m_textLabel;
+    DLabel     *m_timeLabel;
+};
+
 class TitlebarPrivate;
 /**
  * @brief The Titlebar class
@@ -81,8 +100,6 @@ public:
      * @param mp 图标
      */
     void setIcon(QPixmap& mp);
-
-    void toggleFullscreen(bool);
 public slots:
 	//把lambda表达式改为槽函数，modify by myk
     /**

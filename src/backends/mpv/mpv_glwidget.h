@@ -87,7 +87,7 @@ protected:
      * @brief initMpvFuns 第一次播放需要初库始化函数指针
      */
     void initMpvFuns();
-#ifdef __x86_64__
+#if 0
     //更新全屏时影院播放进度
     void updateMovieProgress(qint64 duration, qint64 pos);
 #endif

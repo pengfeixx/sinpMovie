@@ -229,7 +229,7 @@ void MpvProxy::firstInit()
         if (CompositingManager::get().composited()) {
             m_pMpvGLwidget = new MpvGLWidget(this, m_handle);
             connect(this, &MpvProxy::stateChanged, this, &MpvProxy::slotStateChanged);
-#ifdef __x86_64__
+#if 0
             connect(this, &MpvProxy::elapsedChanged, [ this ]() {//更新opengl显示进度
                 m_pMpvGLwidget->updateMovieProgress(duration(), elapsed());
                 m_pMpvGLwidget->update();
