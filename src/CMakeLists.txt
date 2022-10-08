@@ -1,9 +1,14 @@
+# SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 set(CMAKE_AUTOMOC ON)
 set(CMD_NAME deepin-movie)
 
 set(PROJECT_INCLUDE ${PROJECT_SOURCE_DIR}/src/widgets
     ${PROJECT_SOURCE_DIR}/src/common
-    ${PROJECT_SOURCE_DIR}/src/libdmr)
+    ${PROJECT_SOURCE_DIR}/src/libdmr
+    ${PROJECT_SOURCE_DIR}/src/dlna)
 
 add_definitions(-D_MOVIE_USE_)
 
@@ -18,16 +23,15 @@ find_package(Qt5Network)
 find_package(Qt5Concurrent)
 find_package(Qt5Sql)
 find_package(Qt5Svg)
-find_package(gui-private)
 find_package(Qt5Multimedia)
 find_package(Qt5MultimediaWidgets)
+find_package(Qt5Xml)
 
 pkg_check_modules(Dtk REQUIRED IMPORTED_TARGET dtkwidget)
 pkg_check_modules(Dtk REQUIRED IMPORTED_TARGET dtkcore)
 pkg_check_modules(Xcb REQUIRED IMPORTED_TARGET xcb xcb-shape)
-pkg_check_modules(MPRIS REQUIRED IMPORTED_TARGET mpris-qt5)
 pkg_check_modules(DBusextended REQUIRED IMPORTED_TARGET dbusextended-qt5)
-pkg_check_modules(Gst REQUIRED IMPORTED_TARGET gstreamer-1.0 glib-2.0 gstreamer-pbutils-1.0)
+pkg_check_modules(Gst REQUIRED IMPORTED_TARGET gobject-2.0)
 # IMPORTED_TARGET failed to work for some of libs under flatpak env
 pkg_check_modules(Other REQUIRED  gsettings-qt)
 
@@ -38,7 +42,7 @@ if (${Dtk_VERSION} LESS 2.0.6.1)
 endif()
 
 
-file(GLOB_RECURSE SRCS LIST_DIRECTORIES false common/*.cpp widgets/*.cpp libdmr/*.cpp vendor/*.cpp)
+file(GLOB_RECURSE SRCS LIST_DIRECTORIES false common/*.cpp widgets/*.cpp libdmr/*.cpp vendor/*.cpp dlna/*.cpp dlna/*.c)
 list(APPEND SRCS main.cpp)
 
 # mpv backend
@@ -75,25 +79,25 @@ add_executable(${CMD_NAME} ${SRCS} ${RCS} ${QM})
 
 target_include_directories(${CMD_NAME} PUBLIC ${PROJECT_INCLUDE})
 
-set(TARGET_LIBS X11 Xtst PkgConfig::Xcb Qt5::Widgets Qt5::X11Extras Qt5::Network Qt5::GuiPrivate
-    Qt5::DBus Qt5::Sql Qt5::Svg Qt5::Multimedia Qt5::MultimediaWidgets PkgConfig::Dtk PkgConfig::MPRIS PkgConfig::DBusextended PkgConfig::Gst GL va va-x11
-    Qt5::Concurrent)
+set(TARGET_LIBS X11 Xtst PkgConfig::Xcb Qt5::Widgets Qt5::X11Extras Qt5::Network Qt5::DBus Qt5::Sql Qt5::Svg Qt5::Multimedia
+    Qt5::MultimediaWidgets PkgConfig::Dtk PkgConfig::MPRIS PkgConfig::DBusextended PkgConfig::Gst GL va va-x11
+    Qt5::Concurrent Qt5::Xml)
 
 target_link_libraries(${CMD_NAME} ${TARGET_LIBS} ${Other_LIBRARIES})
 
 
-install(TARGETS ${CMD_NAME} DESTINATION bin)
+install(TARGETS ${CMD_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/translations
-    DESTINATION share/${CMD_NAME}
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/${CMD_NAME}
     FILES_MATCHING PATTERN "*.qm")
 install(FILES ${PROJECT_SOURCE_DIR}/deepin-movie.desktop
-    DESTINATION share/applications)
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES ${CMAKE_SOURCE_DIR}/src/libdmr/com.deepin.deepin-movie.gschema.xml
-    DESTINATION /usr/share/glib-2.0/schemas)
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/glib-2.0/schemas)
 install(FILES ${PROJECT_SOURCE_DIR}/assets/resources/icons/logo-big.svg
-    DESTINATION share/icons/hicolor/scalable/apps
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
     RENAME deepin-movie.svg)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/assets/deepin-movie DESTINATION /usr/share/deepin-manual/manual-assets/application/)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/assets/deepin-movie DESTINATION ${CMAKE_INSTALL_DATADIR}/deepin-manual/manual-assets/application/)
 
 #匹配mpris差异
 execute_process(COMMAND dpkg -s libmpris-qt5-1 COMMAND grep -i version COMMAND cut -d\  -f2 OUTPUT_VARIABLE libmprisVersion)

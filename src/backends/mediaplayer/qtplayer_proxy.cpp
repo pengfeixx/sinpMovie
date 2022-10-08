@@ -1,36 +1,8 @@
-/*
- * Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
- *
- * Author:     zhuyuliang <zhuyuliang@uniontech.com>
- *
- * Maintainer: zhuyuliang <zhuyuliang@uniontech.com>
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * is provided AS IS, WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, and
- * NON-INFRINGEMENT.  See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, see <http://www.gnu.org/licenses/>.
- *
- * In addition, as a special exception, the copyright holders give
- * permission to link the code of portions of this program with the
- * OpenSSL library under certain conditions as described in each
- * individual source file, and distribute linked combinations
- * including the two.
- * You must obey the GNU General Public License in all respects
- * for all of the code used other than OpenSSL.  If you modify
- * file(s) with this exception, you may extend this exception to your
- * version of the file(s), but you are not obligated to do so.  If you
- * do not wish to do so, delete this exception statement from your
- * version.  If you delete this exception statement from all source
- * files in the program, then also delete it here.
- */
+// Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
+// SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "config.h"
 
 #include "qtplayer_proxy.h"
@@ -95,6 +67,9 @@ QtPlayerProxy::~QtPlayerProxy()
     if (CompositingManager::get().composited()) {
         disconnect(this, &QtPlayerProxy::stateChanged, nullptr, nullptr);
     }
+
+    m_pVideoSurface->deleteLater();
+    m_pVideoSurface = nullptr;
 }
 
 
@@ -224,6 +199,14 @@ void QtPlayerProxy::savePlaybackPosition()
     if (state() == PlayState::Stopped) {
         return;
     }
+
+#ifndef _LIBDMR_
+    if (duration() - elapsed() >= 5) {
+        MovieConfiguration::get().updateUrl(this->_file, ConfigKnownKey::StartPos, elapsed());
+    } else {
+        MovieConfiguration::get().updateUrl(this->_file, ConfigKnownKey::StartPos, elapsed() - 1);
+    }
+#endif
 }
 
 void QtPlayerProxy::setPlaySpeed(double dTimes)
@@ -333,7 +316,7 @@ void QtPlayerProxy::setSubDelay(double secs)
 
 double QtPlayerProxy::subDelay() const
 {
-
+    return .0;
 }
 
 int QtPlayerProxy::aid() const
@@ -458,6 +441,13 @@ void QtPlayerProxy::initMember()
 
 void QtPlayerProxy::play()
 {
+    bool bRawFormat = false;
+
+    if (0 < dynamic_cast<PlayerEngine *>(m_pParentWidget)->getplaylist()->size()) {
+        PlayItemInfo currentInfo = dynamic_cast<PlayerEngine *>(m_pParentWidget)->getplaylist()->currentInfo();
+        bRawFormat = currentInfo.mi.isRawFormat();
+    }
+  
     if (_file.isLocalFile()) {
         QString strFilePath = QFileInfo(_file.toLocalFile()).absoluteFilePath();
         m_pPlayer->setMedia(QMediaContent(QUrl::fromLocalFile(strFilePath)));
@@ -465,6 +455,14 @@ void QtPlayerProxy::play()
         m_pPlayer->setMedia(QMediaContent(_file));
     }
     m_pPlayer->play();
+
+#ifndef _LIBDMR_
+    QMap<QString, QVariant> cfg = MovieConfiguration::get().queryByUrl(_file);
+    QString key = MovieConfiguration::knownKey2String(ConfigKnownKey::StartPos);
+    if (Settings::get().isSet(Settings::ResumeFromLast) && !bRawFormat) {
+       seekAbsolute(cfg[key].toInt());
+    }
+#endif
 }
 
 void QtPlayerProxy::pauseResume()
@@ -555,7 +553,6 @@ qint64 QtPlayerProxy::elapsed() const
 void QtPlayerProxy::updatePlayingMovieInfo()
 {
 }
-
 
 } // end of namespace dmr
 

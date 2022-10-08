@@ -1,36 +1,8 @@
-/*
- * Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
- *
- * Author:     mouyuankai <mouyuankai@uniontech.com>
- *
- * Maintainer: liuzheng <liuzheng@uniontech.com>
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * is provided AS IS, WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, and
- * NON-INFRINGEMENT.  See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, see <http://www.gnu.org/licenses/>.
- *
- * In addition, as a special exception, the copyright hemiters give
- * permission to link the code of portions of this program with the
- * OpenSSL library under certain conditions as described in each
- * individual source file, and distribute linked combinations
- * including the two.
- * You must obey the GNU General Public License in all respects
- * for all of the code used other than OpenSSL.  If you modify
- * file(s) with this exception, you may extend this exception to your
- * version of the file(s), but you are not obligated to do so.  If you
- * do not wish to do so, delete this exception statement from your
- * version.  If you delete this exception statement from all source
- * files in the program, then also delete it here.
- */
+// Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
+// SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "config.h"
 
 #include "mainwindow.h"
@@ -55,6 +27,7 @@
 #include "vendor/movieapp.h"
 #include "vendor/presenter.h"
 #include "filefilter.h"
+#include "eventlogutils.h"
 
 //#include <QtWidgets>
 #include <QtDBus>
@@ -75,7 +48,7 @@
 #include <X11/cursorfont.h>
 #include <X11/Xlib.h>
 #include "moviewidget.h"
-#include <qpa/qplatformnativeinterface.h>
+//#include <qpa/qplatformnativeinterface.h>
 #include <QtConcurrent>
 
 #include "../accessibility/ac-deepin-movie-define.h"
@@ -641,6 +614,13 @@ MainWindow::MainWindow(QWidget *parent)
 {
     initMember();
 
+    QJsonObject obj{
+        {"tid", EventLogUtils::Start},
+        {"mode", 1}, //冷启动
+        {"version", VERSION}
+    };
+    EventLogUtils::get().writeLogs(obj);
+
     //add bu heyi
     this->setAttribute(Qt::WA_AcceptTouchEvents);
     m_mousePressTimer.setInterval(1300);
@@ -703,6 +683,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this, &MainWindow::frameMenuEnable, &ActionFactory::get(), &ActionFactory::frameMenuEnable);
     connect(this, &MainWindow::playSpeedMenuEnable, &ActionFactory::get(), &ActionFactory::playSpeedMenuEnable);
     connect(this, &MainWindow::subtitleMenuEnable, &ActionFactory::get(), &ActionFactory::subtitleMenuEnable);
+    connect(this, &MainWindow::soundMenuEnable, &ActionFactory::get(), &ActionFactory::soundMenuEnable);
     connect(qApp, &QGuiApplication::focusWindowChanged, this, &MainWindow::slotFocusWindowChanged);
 
     connect(m_pToolbox, &ToolboxProxy::sigVolumeChanged, this, &MainWindow::slotVolumeChanged);
@@ -769,6 +750,8 @@ MainWindow::MainWindow(QWidget *parent)
             m_nLastCookie = utils::InhibitStandby();
             m_nPowerCookie = utils::InhibitPower();
         } else {
+            if (m_pMircastShowWidget->isVisible())
+                return;
             m_pMiniPlayBtn->setIcon(QIcon(":/resources/icons/light/mini/play-normal-mini.svg"));
             m_pMiniPlayBtn->setObjectName("MiniPlayBtn");
 
@@ -920,6 +903,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_pMovieWidget = new MovieWidget(this);
     m_pMovieWidget->hide();
+
+    m_pMircastShowWidget = new MircastShowWidget(this);
+    m_pMircastShowWidget->hide();
+    connect(m_pToolbox, &ToolboxProxy::sigMircastState, this, &MainWindow::slotUpdateMircastState);
+    connect(m_pMircastShowWidget, &MircastShowWidget::exitMircast, this, &MainWindow::slotExitMircast);
 
     qDBusRegisterMetaType<SessionInfo>();
     qDBusRegisterMetaType<SessionInfoList>();
@@ -1170,10 +1158,9 @@ void MainWindow::animatePlayState()
         return;
     }
 
-    if (!m_bInBurstShootMode && m_pEngine->state() == PlayerEngine::CoreState::Paused) {
-        if (!m_bMiniMode) {
-            m_pAnimationlable->pauseAnimation();
-        }
+    if (!m_bInBurstShootMode && m_pEngine->state() == PlayerEngine::CoreState::Paused
+            && !m_bMiniMode && !m_pMircastShowWidget->isVisible()) {
+        m_pAnimationlable->pauseAnimation();
     }
 }
 
@@ -1193,6 +1180,29 @@ void MainWindow::onBindingsChanged()
     for (auto *pAct : vecActions) {
         this->addAction(pAct);
         connect(pAct, &QAction::triggered, [ = ]() {
+            ActionFactory::ActionKind actionKind = ActionFactory::actionKind(pAct);
+            //正在投屏时，某些快捷键设置为不能用
+            if(m_pMircastShowWidget && m_pMircastShowWidget->isVisible() ){
+                if(actionKind == ActionFactory::ToggleFullscreen  //全屏 alt+enter
+                        || actionKind == ActionFactory::QuitFullscreen //退出全屏/迷你模式esc
+                        || actionKind == ActionFactory::AccelPlayback //加速播放 ctrl+right
+                        || actionKind == ActionFactory::DecelPlayback //减速播放 ctrl+left
+                        || actionKind == ActionFactory::ResetPlayback //还原播放 R
+                        || actionKind == ActionFactory::ToggleMiniMode //迷你模式 F2
+                        || actionKind == ActionFactory::VolumeUp //增大音量 ctrl+alt+up
+                        || actionKind == ActionFactory::VolumeDown //减少音量 ctrl+alt+down
+                        || actionKind == ActionFactory::ToggleMute //静音 M
+                        || actionKind == ActionFactory::PreviousFrame //上一帧 ctrl+shift+left
+                        || actionKind == ActionFactory::NextFrame //下一帧 ctrl+shift+right
+                        || actionKind == ActionFactory::Screenshot //影片截图 alt+a
+                        || actionKind == ActionFactory::BurstScreenshot //连拍截图 alt+s
+                        || actionKind == ActionFactory::SubForward //字幕提前0.5s shift+right
+                        || actionKind == ActionFactory::SubDelay //字幕延迟0.5s shift+left
+                        || actionKind == ActionFactory::ViewShortcut //显示快捷键 ctrl + shift + ?
+                  ){
+                    return;
+                }
+            }
             this->menuItemInvoked(pAct);
         });
     }
@@ -1200,6 +1210,8 @@ void MainWindow::onBindingsChanged()
 
 void MainWindow::updateActionsState()
 {
+    //投屏时不处理播放状态切换菜单项是否可用，由右键菜单入口统一处理。
+    if(m_pMircastShowWidget && m_pMircastShowWidget->isVisible()) return;
     PlayingMovieInfo movieInfo = m_pEngine->playingMovieInfo();
     auto update = [ = ](QAction * pAct) {
         ActionFactory::ActionKind actionKind = ActionFactory::actionKind(pAct);
@@ -1779,7 +1791,7 @@ void MainWindow::requestAction(ActionFactory::ActionKind actionKind, bool bFromU
         if (m_pEngine->playlist().count() == 0) {
             requestAction(ActionFactory::ActionKind::OpenFileList);
         } else {
-            if (m_pEngine->state() == PlayerEngine::CoreState::Idle) {
+            if (m_pEngine->state() == PlayerEngine::CoreState::Idle  && m_bIsFree) {
                 //先显示分辨率，再显示静音
                 QSize sz = geometry().size();
                 auto msg = QString("%1x%2").arg(sz.width()).arg(sz.height());
@@ -1887,10 +1899,11 @@ void MainWindow::requestAction(ActionFactory::ActionKind actionKind, bool bFromU
             show();
         } else {
             //wayland 置顶实现
+            QFunctionPointer setWindowProperty = qApp->platformFunction("_d_setWindowProperty");
             if (m_bWindowAbove) { //置顶
-                QGuiApplication::platformNativeInterface()->setWindowProperty(windowHandle()->handle(), "_d_dwayland_staysontop", "true");
+                reinterpret_cast<void(*)(QWindow *, const char *, const QVariant &)>(setWindowProperty)(windowHandle(), "_d_dwayland_staysontop", true);
             } else {//取消置顶
-                QGuiApplication::platformNativeInterface()->setWindowProperty(windowHandle()->handle(), "_d_dwayland_staysontop", "false");
+                reinterpret_cast<void(*)(QWindow *, const char *, const QVariant &)>(setWindowProperty)(windowHandle(), "_d_dwayland_staysontop", false);
             }
         }
         if (!bFromUI) {
@@ -2311,6 +2324,10 @@ void MainWindow::requestAction(ActionFactory::ActionKind actionKind, bool bFromU
     }
 
     case ActionFactory::ActionKind::TogglePause: {
+        if(m_pMircastShowWidget && m_pMircastShowWidget->isVisible() ) {
+            m_pToolbox->getMircast()->slotPauseDlnaTp();
+            break;
+        }
         if (windowState() == Qt::WindowFullScreen && QDateTime::currentMSecsSinceEpoch() - m_nFullscreenTime < 500) {
             return;
         } else if(windowState() == Qt::WindowFullScreen) {
@@ -2339,6 +2356,10 @@ void MainWindow::requestAction(ActionFactory::ActionKind actionKind, bool bFromU
     }
 
     case ActionFactory::ActionKind::SeekBackward: {
+        if(m_pMircastShowWidget && m_pMircastShowWidget->isVisible() ) {
+            m_pToolbox->getMircast()->seekMircast(-5);
+            break;
+        }
         if(m_pEngine->state() != PlayerEngine::CoreState::Idle
                 && m_pEngine->playlist().currentInfo().mi.isRawFormat()) {
             slotUnsupported();
@@ -2349,6 +2370,10 @@ void MainWindow::requestAction(ActionFactory::ActionKind actionKind, bool bFromU
     }
 
     case ActionFactory::ActionKind::SeekForward: {
+        if(m_pMircastShowWidget && m_pMircastShowWidget->isVisible() ) {
+            m_pToolbox->getMircast()->seekMircast(5);
+            break;
+        }
         if(m_pEngine->state() != PlayerEngine::CoreState::Idle
                 && m_pEngine->playlist().currentInfo().mi.isRawFormat()) {
             slotUnsupported();
@@ -2517,7 +2542,8 @@ void MainWindow::onBurstScreenshot(const QImage &frame, qint64 timestamp)
         m_pEngine->stopBurstScreenshot();
         m_bInBurstShootMode = false;
         m_pToolbox->setEnabled(true);
-        m_pTitlebar->titlebar()->setEnabled(true);
+        //fix bug:129205
+//        m_pTitlebar->titlebar()->setEnabled(true);
         if (m_pEventListener) m_pEventListener->setEnabled(!m_bMiniMode);
 
         if (frame.isNull()) {
@@ -2562,7 +2588,7 @@ void MainWindow::startBurstShooting()
     if (m_pEngine->duration() <= 40) return;
     m_bInBurstShootMode = true;
     m_pToolbox->setEnabled(false);
-    m_pTitlebar->titlebar()->setEnabled(false);
+//    m_pTitlebar->titlebar()->setEnabled(false);
     if (m_pEventListener) m_pEventListener->setEnabled(false);
 
     m_bPausedBeforeBurst = m_pEngine->paused();
@@ -2708,11 +2734,15 @@ void MainWindow::suspendToolsWindow()
                 ActionFactory::get().titlebarMenu()->isVisible())
             return;
 
+        QPoint cursor = mapFromGlobal(QCursor::pos());
         if (m_pToolbox->isVisible()) {
-            if (insideToolsArea(mapFromGlobal(QCursor::pos())) && !m_bLastIsTouch)
+            if (m_pToolbox->getMircast()->isVisible() &&
+                    m_pToolbox->getMircast()->geometry().contains(cursor) && !m_bLastIsTouch)
+                return;
+            if (insideToolsArea(cursor) && !m_bLastIsTouch)
                 return;
         } else {
-            if (m_pToolbox->geometry().contains(mapFromGlobal(QCursor::pos()))) {
+            if (m_pToolbox->geometry().contains(cursor)) {
                 return;
             }
         }
@@ -2737,6 +2767,9 @@ void MainWindow::suspendToolsWindow()
 
         if (m_pToolbox->getbAnimationFinash()) {
             m_pToolbox->hide();
+
+            if (m_pToolbox->getMircast()->isVisible())
+                m_pToolbox->hideMircastWidget();
         }
         //reset focus to mainWindow when the titlebar and toolbox is hedden
         //the tab focus will be re-executed in the order set
@@ -3060,6 +3093,26 @@ void MainWindow::slotMediaError()
     m_pEngine->playlist().remove(m_pEngine->playlist().current());
 }
 
+void MainWindow::mircastSuccess(QString name)
+{
+    if (m_pEngine->state() == PlayerEngine::Playing)
+        m_pEngine->pauseResume();
+    updateActionsState();
+    m_pMircastShowWidget->setDeviceName(name);
+    m_pMircastShowWidget->show();
+    m_pToolbox->hideMircastWidget();
+}
+
+void MainWindow::exitMircast()
+{
+    if (m_pEngine->state() == PlayerEngine::Playing)
+        m_pEngine->pauseResume();
+    m_pEngine->seekAbsolute(m_pToolbox->getSlider()->value());
+    updateActionsState();
+    m_pToolbox->getMircast()->slotExitMircast();
+    m_pMircastShowWidget->hide();
+}
+
 void MainWindow::checkErrorMpvLogsChanged(const QString sPrefix, const QString sText)
 {
     QString sErrorMessage(sText);
@@ -3104,6 +3157,14 @@ void MainWindow::checkErrorMpvLogsChanged(const QString sPrefix, const QString s
 void MainWindow::closeEvent(QCloseEvent *pEvent)
 {
     qInfo() << __func__;
+    if(m_pMircastShowWidget&&m_pMircastShowWidget->isVisible()) {
+        slotExitMircast();
+    }
+    if (m_bInBurstShootMode) {
+        pEvent->ignore();
+        return;
+    }
+
     if (m_nLastCookie > 0) {
         utils::UnInhibitStandby(m_nLastCookie);
         qInfo() << "uninhibit cookie" << m_nLastCookie;
@@ -3117,7 +3178,8 @@ void MainWindow::closeEvent(QCloseEvent *pEvent)
             Settings::get().setInternalOption("playlist_pos", nCur);
         }
     }
-
+    //关闭窗口时保存音量值
+    Settings::get().setInternalOption("global_volume", m_nDisplayVolume > 100 ? 100 : m_nDisplayVolume);
     m_pEngine->savePlaybackPosition();
 
     pEvent->accept();
@@ -3151,6 +3213,9 @@ void MainWindow::wheelEvent(QWheelEvent *pEvent)
     if (insideToolsArea(pEvent->pos()) || insideResizeArea(pEvent->globalPos()))
         return;
 
+    if (m_pToolbox->isInMircastWidget(pEvent->pos()))
+        return;
+
     if (m_pPlaylist && m_pPlaylist->state() == PlaylistWidget::Opened) {
         pEvent->ignore();
         return;
@@ -3179,6 +3244,13 @@ void MainWindow::showEvent(QShowEvent *pEvent)
     m_pToolbox->raise();
     if (m_pPlaylist) {
         m_pPlaylist->raise();
+    }
+    //判断屏幕可用坐标与应用的geometry是否有交集，没有就设置到可用屏幕坐标中
+    QRect geoRect = geometry();
+    QRect deskRect = QApplication::desktop()->availableGeometry(geoRect.topLeft());
+
+    if(!deskRect.intersects(geoRect)) {
+        setGeometry(QRect(deskRect.x(), deskRect.y(), geoRect.width(), geoRect.width()));
     }
     resumeToolsWindow();
 
@@ -3311,6 +3383,9 @@ void MainWindow::resizeEvent(QResizeEvent *pEvent)
 //    }
     m_pMovieWidget->resize(rect().size());
     m_pMovieWidget->move(0, 0);
+
+    m_pMircastShowWidget->resize(rect().size());
+    m_pMircastShowWidget->move(0, 0);
 
     m_pAnimationlable->move(QPoint((width() - m_pAnimationlable->width()) / 2,
                                    (height() - m_pAnimationlable->height()) / 2));
@@ -3501,6 +3576,8 @@ void MainWindow::mouseDoubleClickEvent(QMouseEvent *pEvent)
         qInfo() << "playlist loadthread is running";
         return;
     }
+    //投屏时双击操作不做处理
+    if(m_pMircastShowWidget && m_pMircastShowWidget->isVisible()) return;
     if (!m_bMiniMode && !m_bInBurstShootMode) {
         m_delayedMouseReleaseTimer.stop();
         if (m_pEngine->state() == PlayerEngine::Idle) {
@@ -3580,6 +3657,26 @@ void MainWindow::contextMenuEvent(QContextMenuEvent *pEvent)
                 reflectActionToUI(ActionFactory::WindowAbove);
             }
         }
+    }
+
+    if(m_pMircastShowWidget->isVisible() ) {//投屏中屏蔽全屏、迷你模式，置顶菜单
+        QList<ActionFactory::ActionKind> lstActId;
+        lstActId << ActionFactory::ToggleFullscreen << ActionFactory::ToggleMiniMode << ActionFactory::WindowAbove;
+        for(ActionFactory::ActionKind id: lstActId) {
+            QList<QAction *> listActs;
+            listActs = ActionFactory::get().findActionsByKind(id);
+            if(listActs.size()<=0) {
+                continue;
+            }
+            for(QAction *act: listActs) {
+                act->setEnabled(false);
+            }
+        }
+        //倍速播放、画面、声音、字幕、截图
+        emit frameMenuEnable(false);
+        emit playSpeedMenuEnable(false);
+        emit subtitleMenuEnable(false);
+        emit soundMenuEnable(false);
     }
 
     resumeToolsWindow();
@@ -3778,12 +3875,13 @@ void MainWindow::paintEvent(QPaintEvent *pEvent)
     }
 
     if (m_pEngine->state() == PlayerEngine::Idle) {
-        QImage &bg = m_imgBgDark;
-        if (DGuiApplicationHelper::DarkType == DGuiApplicationHelper::instance()->themeType()) {
-            QImage img = utils::LoadHiDPIImage(":/resources/icons/dark/init-splash-bac.svg");
-            QPointF pos = bgRect.center() - QPoint(img.width() / 2, img.height() / 2) / devicePixelRatioF();
-            painter.drawImage(pos, img);
-        }
+        QImage bg = QIcon::fromTheme("deepin-movie").pixmap(130, 130).toImage();
+        //和产品、ui商议深色主题下去除深色背景效果
+//        if (DGuiApplicationHelper::DarkType == DGuiApplicationHelper::instance()->themeType()) {
+//            QImage img = utils::LoadHiDPIImage(":/resources/icons/dark/init-splash-bac.svg");
+//            QPointF pos = bgRect.center() - QPoint(img.width() / 2, img.height() / 2) / devicePixelRatioF();
+//            painter.drawImage(pos, img);
+//        }
         QPointF pos = bgRect.center() - QPoint(bg.width() / 2, bg.height() / 2) / devicePixelRatioF();
         painter.drawImage(pos, bg);
     }
@@ -3839,7 +3937,6 @@ void MainWindow::toggleUIMode()
             } else if (m_preMiniWindowState & Qt::WindowFullScreen) {
                 move(0, 0);
                 showFullScreen();
-                reflectActionToUI(ActionFactory::ToggleFullscreen);
             } else {
                 showNormal();
             }
@@ -3960,7 +4057,12 @@ void MainWindow::toggleUIMode()
             }
 
             if (m_lastRectInNormalMode.isValid()) {
-                setGeometry(m_lastRectInNormalMode);
+                QRect deskRect = QApplication::desktop()->availableGeometry(m_lastRectInNormalMode.topLeft());
+                if(m_lastRectInNormalMode.intersects(deskRect)) {
+                    setGeometry(m_lastRectInNormalMode);
+                } else {
+                    setGeometry(QRect(deskRect.x(), deskRect.y(), m_lastRectInNormalMode.width(), m_lastRectInNormalMode.height()));
+                }
             } else {
                 resizeByConstraints();
             }
@@ -4102,6 +4204,10 @@ void MainWindow::sleepStateChanged(bool bSleep)
      //   m_pEngine->seekAbsolute(static_cast<int>(m_pEngine->elapsed()));
     //    return;
     //}
+    //休眠退出投屏
+    if(bSleep && m_pMircastShowWidget && m_pMircastShowWidget->isVisible()) {
+        slotExitMircast();
+    }
     if (bSleep && m_pEngine->state() == PlayerEngine::CoreState::Playing) {
         m_bStartSleep = true;
         requestAction(ActionFactory::ActionKind::TogglePause);
@@ -4114,6 +4220,10 @@ void MainWindow::sleepStateChanged(bool bSleep)
 void MainWindow::lockStateChanged(bool bLock)
 {
     qInfo() << __func__ << bLock;
+    //锁屏退出投屏
+    if(bLock && m_pMircastShowWidget && m_pMircastShowWidget->isVisible()) {
+        slotExitMircast();
+    }
     if (bLock && m_pEngine->state() == PlayerEngine::CoreState::Playing && !m_bStateInLock) {
         m_bStateInLock = true;
         requestAction(ActionFactory::ActionKind::TogglePause);
@@ -4145,6 +4255,7 @@ void MainWindow::initMember()
     m_pDBus = nullptr;
     m_pPresenter = nullptr;
     m_pMovieWidget = nullptr;
+    m_pMircastShowWidget = nullptr;
     m_bInBurstShootMode = false;
     m_bPausedBeforeBurst = false;
 
@@ -4333,6 +4444,51 @@ void MainWindow::slotInvalidFile(QString strFileName)
        showTime = showTime - 1000;
        m_pCommHintWid->updateWithMessage(QString(tr("Invalid file: %1").arg(strFileName)));
     });
+}
+
+void MainWindow::slotUpdateMircastState(int state, QString msg)
+{
+    switch (state) {
+    case MIRCAST_SUCCESSED: //投屏成功
+    {
+        mircastSuccess(msg);
+        emit frameMenuEnable(false);
+        emit playSpeedMenuEnable(false);
+        emit subtitleMenuEnable(false);
+        emit soundMenuEnable(false);
+    }
+        break;
+    case MIRCAST_EXIT://投屏退出
+    {
+        slotExitMircast();
+    }
+        break;
+    case MIRCAST_CONNECTION_FAILED://投屏连接失败
+    {
+        const QIcon icon = QIcon(":/resources/icons/short_fail.svg");
+        QString sText = QString(tr("Connection failed"));
+        popupAdapter(icon, sText);
+        slotExitMircast();
+    }
+        break;
+    case MIRCAST_DISCONNECTIONED://投屏丢失连接
+    {
+        m_pCommHintWid->updateWithMessage(tr("Miracast disconnected"));
+        slotExitMircast();
+    }
+        break;
+    default:
+        break;
+    }
+}
+
+void MainWindow::slotExitMircast()
+{
+    exitMircast();
+    emit frameMenuEnable(true);
+    emit playSpeedMenuEnable(true);
+    emit subtitleMenuEnable(true);
+    emit soundMenuEnable(true);
 }
 
 void MainWindow::updateGeometry(CornerEdge edge, QPoint pos)

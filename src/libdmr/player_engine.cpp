@@ -1,36 +1,8 @@
-/*
- * Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
- *
- * Author:     fengli <fengli@uniontech.com>
- *
- * Maintainer: xiepengfei <xiepengfei@uniontech.com>
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * is provided AS IS, WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, and
- * NON-INFRINGEMENT.  See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, see <http://www.gnu.org/licenses/>.
- *
- * In addition, as a special exception, the copyright holders give
- * permission to link the code of portions of this program with the
- * OpenSSL library under certain conditions as described in each
- * individual source file, and distribute linked combinations
- * including the two.
- * You must obey the GNU General Public License in all respects
- * for all of the code used other than OpenSSL.  If you modify
- * file(s) with this exception, you may extend this exception to your
- * version of the file(s), but you are not obligated to do so.  If you
- * do not wish to do so, delete this exception statement from your
- * version.  If you delete this exception statement from all source
- * files in the program, then also delete it here.
- */
+// Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
+// SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "config.h"
 #include <iostream>
 #include "player_engine.h"
@@ -42,6 +14,7 @@
 #include "dguiapplicationhelper.h"
 #include "filefilter.h"
 #include "qtplayer_proxy.h"
+#include "eventlogutils.h"
 
 #include <QPainterPath>
 
@@ -139,7 +112,9 @@ bool PlayerEngine::isPlayableFile(const QUrl &url)
     if (FileFilter::instance()->isMediaFile(url)) {
         return true;
     } else {    // 网络文件不提示
-        emit sigInvalidFile(QFileInfo(url.toString()).fileName());
+        if(url.isLocalFile()) {
+            emit sigInvalidFile(QFileInfo(url.toLocalFile()).fileName());
+        }
         return false;
     }
 }
@@ -156,9 +131,10 @@ bool PlayerEngine::isPlayableFile(const QString &name)
     }
 
     if (url.isLocalFile()) {   // 网络文件不提示
-        emit sigInvalidFile(QFileInfo(url.toString()).fileName());
+        emit sigInvalidFile(QFileInfo(url.toLocalFile()).fileName());
         return false;
     }
+    return  false;
 }
 
 bool PlayerEngine::isAudioFile(const QString &name)
@@ -535,17 +511,16 @@ void PlayerEngine::paintEvent(QPaintEvent *e)
         if (_state != Idle && m_bAudio) {
             p.fillRect(rect, QBrush(QColor(0, 0, 0)));
         } else {
-            QImage icon = utils::LoadHiDPIImage(":/resources/icons/light/init-splash.svg");
+            QImage icon = QIcon::fromTheme("deepin-movie").pixmap(130, 130).toImage();;
             QPixmap pix = QPixmap::fromImage(icon);
-            int x = this->rect().center().x() - pix.width() / 2;
-            int y = this->rect().center().y() - pix.height() / 2;
+            QPointF pos = rect.center() - QPoint(pix.width() / 2, pix.height() / 2) / devicePixelRatioF();
 
             if (DGuiApplicationHelper::LightType == DGuiApplicationHelper::instance()->themeType()) {
                 p.fillRect(rect, QBrush(QColor(255, 255, 255)));
-                p.drawPixmap(x, y, pix);
+                p.drawPixmap(pos, pix);
             } else {
                 p.fillRect(rect, QBrush(QColor(0, 0, 0)));
-                p.drawPixmap(x, y, pix);
+                p.drawPixmap(pos, pix);
             }
         }
     }
@@ -571,6 +546,18 @@ void PlayerEngine::requestPlay(int id)
     } else {
         // TODO: delete and try next backend?
     }
+
+    QJsonObject obj{
+        {"tid", EventLogUtils::StartPlaying},
+        {"version", VERSION},
+        {"successful", item.url.isLocalFile() ? "true" : ""},
+        {"type", currFileIsAudio() ? "audio" : "video"},
+        {"origin", item.url.isLocalFile() ? "local" : "http"},
+        {"encapsulation_format", item.mi.fileType},
+        {"coding_format",  utils::videoIndex2str(item.mi.vCodecID)}
+    };
+
+    EventLogUtils::get().writeLogs(obj);
 }
 
 void PlayerEngine::savePlaybackPosition()
@@ -752,7 +739,7 @@ bool PlayerEngine::addPlayFile(const QUrl &url)
     if (!isPlayableFile(realUrl))
         return false;
 
-    _playlist->append({realUrl});
+    _playlist->append(realUrl);
     return true;
 }
 

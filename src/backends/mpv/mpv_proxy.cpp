@@ -1,36 +1,8 @@
-/*
- * Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
- *
- * Author:     xiepengfei <xiepengfei@uniontech.com>
- *
- * Maintainer: xiepengfei <xiepengfei@uniontech.com>
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * is provided AS IS, WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, and
- * NON-INFRINGEMENT.  See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, see <http://www.gnu.org/licenses/>.
- *
- * In addition, as a special exception, the copyright holders give
- * permission to link the code of portions of this program with the
- * OpenSSL library under certain conditions as described in each
- * individual source file, and distribute linked combinations
- * including the two.
- * You must obey the GNU General Public License in all respects
- * for all of the code used other than OpenSSL.  If you modify
- * file(s) with this exception, you may extend this exception to your
- * version of the file(s), but you are not obligated to do so.  If you
- * do not wish to do so, delete this exception statement from your
- * version.  If you delete this exception statement from all source
- * files in the program, then also delete it here.
- */
+// Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
+// SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "config.h"
 
 #include "mpv_proxy.h"
@@ -376,15 +348,24 @@ mpv_handle *MpvProxy::mpv_init()
         //2.1特殊硬件
         //景嘉微显卡目前只支持vo=xv，等日后升级代码需要酌情修改。
         QFileInfo fi("/dev/mwv206_0");
-        if (fi.exists()) { //2.1.1景嘉微
-            QDir sdir(CompositingManager::libPath("mwv206")); //判断是否安装核外驱动
+        QFileInfo jmfi("/dev/jmgpu"); //jmgpu
+        if (fi.exists() || jmfi.exists()) { //2.1.1景嘉微
+            QDir sdir(QLibraryInfo::location(QLibraryInfo::LibrariesPath) +QDir::separator() +"mwv206"); //判断是否安装核外驱动
+            QDir jmdir(QLibraryInfo::location(QLibraryInfo::LibrariesPath) +QDir::separator() +"mwv207");
             if(sdir.exists()) {
                  my_set_property(m_handle, "hwdec", "vdpau");
             } else {
                  my_set_property(m_handle, "hwdec", "auto");
             }
-            my_set_property(m_handle, "vo", "vdpau,xv,x11");
-            m_sInitVo = "vdpau,xv,x11";
+
+            if (!sdir.exists() && jmdir.exists()) {
+                my_set_property(m_handle, "hwdec", "vaapi");
+                my_set_property(m_handle, "vo", "vaapi");
+                m_sInitVo = "vaapi";
+            } else {
+                my_set_property(m_handle, "vo", "vdpau,xv,x11");
+                m_sInitVo = "vdpau,xv,x11";
+            }
         } else if (QFile::exists("/dev/csmcore")) { //2.1.2中船重工
             my_set_property(m_handle, "vo", "xv,x11");
             my_set_property(m_handle, "hwdec", "auto");
@@ -398,7 +379,7 @@ mpv_handle *MpvProxy::mpv_init()
             my_set_property(m_handle, "hwdec", "auto");
         }
 
-#if defined (__mips__) || defined(_loongarch) || defined(__loongarch__) || defined(__loongarch64)
+#if defined (__mips__)
         if (!CompositingManager::get().hascard()) {
             qInfo() << "修改音视频同步模式";
             my_set_property(m_handle, "video-sync", "desync");
@@ -406,32 +387,59 @@ mpv_handle *MpvProxy::mpv_init()
         my_set_property(m_handle, "vo", "vdpau,gpu,x11");
         my_set_property(m_handle, "ao", "alsa");
         m_sInitVo = "vdpau,gpu,x11";
+#elif defined(_loongarch) || defined(__loongarch__) || defined(__loongarch64)
+        if (!CompositingManager::get().hascard()) {
+            qInfo() << "修改音视频同步模式";
+            my_set_property(m_handle, "video-sync", "desync");
+        }
+        if (!fi.exists() && !jmfi.exists()) {
+            my_set_property(m_handle, "vo", "gpu,x11");
+            m_sInitVo = "gpu,x11";
+        }
 #elif defined (__sw_64__)
         //Synchronously modify the video output of the SW platform vdpau(powered by zhangfl)
         my_set_property(m_handle, "vo", "vdpau,gpu,x11");
         m_sInitVo = "vdpau,gpu,x11";
 #elif defined (__aarch64__)
-        if (!fi.exists()) { //2.1.1景嘉微
+        if (!fi.exists() && !jmfi.exists()) { //2.1.1景嘉微
             my_set_property(m_handle, "vo", "gpu,xv,x11");
             m_sInitVo = "gpu,xv,x11";
         }
 #else
+        //去除9200显卡适配
+        QFileInfo sjmfi("/dev/jmgpu");
+        bool jmflag = false;
+        if (sjmfi.exists()) {
+            QDir jmdir(QLibraryInfo::location(QLibraryInfo::LibrariesPath) +QDir::separator() +"mwv207");
+            if(jmdir.exists())
+            {
+                jmflag=true;
+            }
+        }
         //TODO(xxxxpengfei)：暂未处理intel集显情况
-        if (CompositingManager::get().isZXIntgraphics()) {
+        if (CompositingManager::get().isZXIntgraphics() && !jmflag) {
             my_set_property(m_handle, "vo", "gpu");
         }
 #endif
     } else { //3.设置硬解
         QFileInfo fi("/dev/mwv206_0");
+		QFileInfo jmfi("/dev/jmgpu");
         if (fi.exists()) { //2.1.1景嘉微
             QDir sdir(CompositingManager::libPath("mwv206")); //判断是否安装核外驱动
+			QDir jmdir(CompositingManager::libPath("mwv207"));
             if(sdir.exists()) {
                  my_set_property(m_handle, "hwdec", "vdpau");
             } else {
                  my_set_property(m_handle, "hwdec", "auto");
             }
-            my_set_property(m_handle, "vo", "vdpau,xv,x11");
-            m_sInitVo = "vdpau,xv,x11";
+            if (!sdir.exists() && jmdir.exists()) {
+                my_set_property(m_handle, "hwdec", "vaapi");
+                my_set_property(m_handle, "vo", "vaapi");
+                m_sInitVo = "vaapi";
+            } else {
+                my_set_property(m_handle, "vo", "vdpau,xv,x11");
+                m_sInitVo = "vdpau,xv,x11";
+            }
         } else {
             my_set_property(m_handle, "hwdec", "auto");
         }
@@ -466,7 +474,7 @@ mpv_handle *MpvProxy::mpv_init()
     //my_set_property(pHandle, "correct-pts", false);
     //my_set_property(pHandle, "fps", 30);
     my_set_property(pHandle, "panscan", 0);
-    my_set_property(pHandle, "volume-max", 100.0);
+    my_set_property(pHandle, "volume-max", 200.0);
     my_set_property(pHandle, "input-cursor", "no");
     my_set_property(pHandle, "cursor-autohide", "no");
     my_set_property(pHandle, "sub-auto", "fuzzy");
@@ -514,7 +522,8 @@ mpv_handle *MpvProxy::mpv_init()
 #if !defined (__mips__ ) && !defined(__aarch64__) && !defined(__sw_64__)
 #ifdef MWV206_0
             QFileInfo fi("/dev/mwv206_0");              //景嘉微显卡目前只支持vo=xv，等日后升级代码需要酌情修改。
-            if (!fi.exists()) {
+            QFileInfo jmfi("/dev/jmgpu"); //jmgpu
+            if (!fi.exists() && !jmfi.exists()) {
                 my_set_property(pHandle, p->first.toUtf8().constData(), p->second.toUtf8().constData());
                 qInfo() << "apply" << p->first << "=" << p->second;
             }
@@ -662,11 +671,13 @@ void MpvProxy::handle_mpv_events()
             // caused by seek or just playing
             break;
 
+#if MPV_CLIENT_API_VERSION < MPV_MAKE_VERSION(2,0)
         case MPV_EVENT_TRACKS_CHANGED:
             qInfo() << m_eventName(pEvent->event_id);
             updatePlayingMovieInfo();
             emit tracksChanged();
             break;
+#endif
 
         case MPV_EVENT_FILE_LOADED: {
             qInfo() << m_eventName(pEvent->event_id);
@@ -1016,8 +1027,8 @@ void MpvProxy::volumeDown()
 int MpvProxy::volume() const
 {
     int nActualVol = my_get_property(m_handle, "volume").toInt();
-    int nDispalyVol = static_cast<int>((nActualVol - 40) / 60.0 * 200.0);
-    return nDispalyVol;
+    int nDispalyVol = static_cast<int>((nActualVol - 40) / 60.0 * 100.0);
+    return nDispalyVol > 100 ? nActualVol : nDispalyVol;
 }
 
 int MpvProxy::videoRotation() const
@@ -1079,10 +1090,22 @@ void MpvProxy::refreshDecode()
             auto codec = currentInfo.mi.videoCodec();
             auto name = _file.fileName();
             isSoftCodec = codec.toLower().contains("mpeg2video") || codec.toLower().contains("wmv") || name.toLower().contains("wmv");
+#if !defined(_loongarch) && !defined(__loongarch__) && !defined(__loongarch64)
+            //去除9200显卡适配
+            QFileInfo jmfi("/dev/jmgpu");
+            bool jmflag =false;
+            if (jmfi.exists()) {
+                QDir jmdir(QLibraryInfo::location(QLibraryInfo::LibrariesPath) +QDir::separator() +"mwv207");
+                if(jmdir.exists())
+                {
+                    jmflag=true;
+                }
+            }
             //探测硬解码
-            if(!isSoftCodec) {
+            if(!isSoftCodec && !CompositingManager::get().isZXIntgraphics() && !jmflag) {
                 isSoftCodec = !isSurportHardWareDecode(codec, currentInfo.mi.width, currentInfo.mi.height);
             }
+#endif
         }
 
         if (isSoftCodec) {
@@ -1091,13 +1114,18 @@ void MpvProxy::refreshDecode()
         } else { //2.2 非特殊格式
             //2.2.1 特殊硬件
             QFileInfo fi("/dev/mwv206_0"); //2.2.1.1 景嘉微
-            if (fi.exists()) {
+            QFileInfo jmfi("/dev/jmgpu");
+            if (fi.exists() || jmfi.exists()) {
                 QDir sdir(CompositingManager::libPath("mwv206")); //判断是否安装核外驱动
+				QDir jmdir(CompositingManager::libPath("mwv207"));
                 if(sdir.exists())
                 {
                      my_set_property(m_handle, "hwdec", "vdpau");
                 }else {
                      my_set_property(m_handle, "hwdec", "auto");
+                }
+                if (!sdir.exists() && jmdir.exists()) {
+                    my_set_property(m_handle, "hwdec", "vaapi");
                 }
             } else if (CompositingManager::get().isOnlySoftDecode()) { //2.2.1.2 鲲鹏920 || 曙光+英伟达 || 浪潮
                 my_set_property(m_handle, "hwdec", "no");
@@ -1133,13 +1161,18 @@ void MpvProxy::refreshDecode()
         }
 #endif
         QFileInfo fi("/dev/mwv206_0"); //2.2.1.1 景嘉微
-        if (fi.exists()) {
+        QFileInfo jmfi("/dev/jmgpu");
+        if (fi.exists() || jmfi.exists()) {
             QDir sdir(CompositingManager::libPath("mwv206")); //判断是否安装核外驱动
+			QDir jmdir(CompositingManager::libPath("mwv207"));
             if(sdir.exists())
             {
                  my_set_property(m_handle, "hwdec", "vdpau");
             } else {
                  my_set_property(m_handle, "hwdec", "auto");
+            }
+            if (!sdir.exists() && jmdir.exists()) {
+                my_set_property(m_handle, "hwdec", "vaapi");
             }
         }
 
@@ -1272,6 +1305,16 @@ void MpvProxy::play()
     //刷新解码模式
     refreshDecode();
 
+    QFileInfo fi("/dev/mwv206_0");  // 景美驱动硬解avs2有崩溃问题
+    if (fi.exists()) {
+        QDir sdir(QLibraryInfo::location(QLibraryInfo::LibrariesPath) +QDir::separator() +"mwv206");
+        QString sCodec = pEngine->playlist().currentInfo().mi.videoCodec();
+        if(sdir.exists() && sCodec.contains("avs2", Qt::CaseInsensitive)) {
+             my_set_property(m_handle, "hwdec", "no");
+             my_set_property(m_handle, "vo", "gpu,x11,xv");
+        }
+    }
+
     if (listOpts.size()) {
         listArgs << "replace" << listOpts.join(',');
     }
@@ -1382,7 +1425,9 @@ qint64 MpvProxy::nextBurstShootPoint()
 int MpvProxy::volumeCorrection(int displayVol)
 {
     int realVol = 0;
-    realVol = static_cast<int>((displayVol / 200.0) * 60.0 + 40);
+    if (displayVol > 100)
+        return displayVol;
+    realVol = static_cast<int>((displayVol / 100.0) * 60.0 + 40);
     return (realVol == 40 ? 0 : realVol);
 }
 

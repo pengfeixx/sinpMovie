@@ -1,23 +1,8 @@
-/*
- * Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
- *
- * Author:     zhuyuliang <zhuyuliang@uniontech.com>
- *
- * Maintainer: xiepengfei <xiepengfei@uniontech.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
+// SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "platform_volumeslider.h"
 #include "platform_toolbox_proxy.h"
 #include "dbusutils.h"
@@ -129,7 +114,7 @@ QString Platform_VolumeSlider::readSinkInputPath()
         QVariant nameV = ApplicationAdaptor::redDBusProperty("com.deepin.daemon.Audio", curPath.path(),
                                                              "com.deepin.daemon.Audio.SinkInput", "Name");
         QString strMovie = QObject::tr("Movie");
-        if (!nameV.isValid() || (!nameV.toString().contains(strMovie, Qt::CaseInsensitive) && !nameV.toString().contains("deepin-movie", Qt::CaseInsensitive)))
+        if (!nameV.isValid() || (!nameV.toString().contains(strMovie, Qt::CaseInsensitive) && !nameV.toString().contains("deepin movie", Qt::CaseInsensitive)))
             continue;
 
         strPath = curPath.path();
@@ -334,7 +319,10 @@ void Platform_VolumeSlider::refreshIcon()
 
 void Platform_VolumeSlider::muteButtnClicked()
 {
-    changeMuteState(!m_bIsMute);
+    bool bMute = m_bIsMute;
+
+    changeMuteState(!bMute);
+    setMute(!bMute);
 }
 
 bool Platform_VolumeSlider::getsliderstate()

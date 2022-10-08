@@ -1,36 +1,8 @@
-/*
- * Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
- *
- * Author:     zhuyuliang <zhuyuliang@uniontech.com>
- *
- * Maintainer: xiepengfei <xiepengfei@uniontech.com>
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * is provided AS IS, WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, and
- * NON-INFRINGEMENT.  See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, see <http://www.gnu.org/licenses/>.
- *
- * In addition, as a special exception, the copyright holders give
- * permission to link the code of portions of this program with the
- * OpenSSL library under certain conditions as described in each
- * individual source file, and distribute linked combinations
- * including the two.
- * You must obey the GNU General Public License in all respects
- * for all of the code used other than OpenSSL.  If you modify
- * file(s) with this exception, you may extend this exception to your
- * version of the file(s), but you are not obligated to do so.  If you
- * do not wish to do so, delete this exception statement from your
- * version.  If you delete this exception statement from all source
- * files in the program, then also delete it here.
- */
+// Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
+// SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "playlist_model.h"
 #include "player_engine.h"
 #include "utils.h"
@@ -45,6 +17,7 @@
 
 #include <random>
 extern "C" {
+#include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/dict.h>
 #include <libavutil/avutil.h>
@@ -157,6 +130,12 @@ public:
         bool mi_valid {false};
         bool thumb_valid {false};
 //        char m_padding [6];//占位符
+        CacheInfo() {
+            thumb = QPixmap();
+            thumb_dark = QPixmap();
+            mi_valid = false;
+            thumb_valid = false;
+        }
     };
 
     CacheInfo loadFromCache(const QUrl &url)
@@ -425,6 +404,7 @@ void PlaylistModel::slotStateChanged()
             pif.loaded = true;
             emit itemInfoUpdated(_current);
         }
+        _userRequestingItem = false;
         break;
     }
     case PlayerEngine::Paused:
@@ -671,10 +651,10 @@ QImage PlaylistModel::getMovieCover(const QUrl &url)
 }
 
 
-/*PlaylistModel::PlayMode PlaylistModel::playMode() const
+PlaylistModel::PlayMode PlaylistModel::playMode() const
 {
     return _playMode;
-}*/
+}
 
 void PlaylistModel::setPlayMode(PlaylistModel::PlayMode pm)
 {
@@ -820,7 +800,7 @@ void PlaylistModel::playNext(bool fromUser)
     qInfo() << "playmode" << _playMode << "fromUser" << fromUser
             << "last" << _last << "current" << _current;
 
-    _userRequestingItem = fromUser;
+    _userRequestingItem = true;
 
     switch (_playMode) {
     case SinglePlay:
@@ -904,8 +884,6 @@ void PlaylistModel::playNext(bool fromUser)
         tryPlayCurrent(true);
         break;
     }
-
-    _userRequestingItem = false;
 }
 
 void PlaylistModel::playPrev(bool fromUser)
@@ -914,7 +892,7 @@ void PlaylistModel::playPrev(bool fromUser)
     qInfo() << "playmode" << _playMode << "fromUser" << fromUser
             << "last" << _last << "current" << _current;
 
-    _userRequestingItem = fromUser;
+    _userRequestingItem = true;
 
     switch (_playMode) {
     case SinglePlay:
@@ -992,9 +970,6 @@ void PlaylistModel::playPrev(bool fromUser)
         tryPlayCurrent(false);
         break;
     }
-
-    _userRequestingItem = false;
-
 }
 
 static QDebug operator<<(QDebug s, const QFileInfoList &v)
@@ -1323,7 +1298,6 @@ void PlaylistModel::changeCurrent(int pos)
     _current = pos;
     _last = _current;
     tryPlayCurrent(true);
-    _userRequestingItem = false;
     emit currentChanged();
 }
 

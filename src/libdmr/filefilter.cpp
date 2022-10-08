@@ -1,39 +1,24 @@
-/*
- * Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
- *
- * Author:     zhuyuliang <zhuyuliang@uniontech.com>
- *
- * Maintainer: xiepengfei <xiepengfei@uniontech.com>
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but
- * is provided AS IS, WITHOUT ANY WARRANTY; without even the implied
- * warranty of MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, and
- * NON-INFRINGEMENT.  See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, see <http://www.gnu.org/licenses/>.
- *
- * In addition, as a special exception, the copyright holders give
- * permission to link the code of portions of this program with the
- * OpenSSL library under certain conditions as described in each
- * individual source file, and distribute linked combinations
- * including the two.
- * You must obey the GNU General Public License in all respects
- * for all of the code used other than OpenSSL.  If you modify
- * file(s) with this exception, you may extend this exception to your
- * version of the file(s), but you are not obligated to do so.  If you
- * do not wish to do so, delete this exception statement from your
- * version.  If you delete this exception statement from all source
- * files in the program, then also delete it here.
- */
+// Copyright (C) 2020 ~ 2021, Deepin Technology Co., Ltd. <support@deepin.org>
+// SPDX-FileCopyrightText: 2022 UnionTech Software Technology Co., Ltd.
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "filefilter.h"
 #include "compositing_manager.h"
+
+#include <iostream>
+#include <functional>
+using namespace std;
+
 FileFilter* FileFilter::m_pFileFilter = new FileFilter;
+
+static mvideo_gst_discoverer_info_get_uri g_mvideo_gst_discoverer_info_get_uri = nullptr;
+static mvideo_gst_discoverer_info_get_result g_mvideo_gst_discoverer_info_get_result = nullptr;
+static mvideo_gst_discoverer_info_get_misc g_mvideo_gst_discoverer_info_get_misc = nullptr;
+static mvideo_gst_structure_to_string g_mvideo_gst_structure_to_string = nullptr;
+static mvideo_gst_discoverer_info_get_video_streams g_mvideo_gst_discoverer_info_get_video_streams = nullptr;
+static mvideo_gst_discoverer_info_get_audio_streams g_mvideo_gst_discoverer_info_get_audio_streams = nullptr;
+static mvideo_gst_discoverer_info_get_subtitle_streams g_mvideo_gst_discoverer_info_get_subtitle_streams = nullptr;
 
 FileFilter::FileFilter()
 {
@@ -49,10 +34,27 @@ FileFilter::FileFilter()
     g_mvideo_avformat_find_stream_info = (mvideo_avformat_find_stream_info) avformatLibrary.resolve("avformat_find_stream_info");
     g_mvideo_avformat_close_input = (mvideo_avformat_close_input) avformatLibrary.resolve("avformat_close_input");
 
-    gst_init(nullptr, nullptr);
+    QLibrary gstreamerLibrary(libPath("libgstreamer-1.0.so"));
+    QLibrary gstpbutilsLibrary(libPath("libgstpbutils-1.0.so"));
+
+    g_mvideo_gst_init = (mvideo_gst_init) gstreamerLibrary.resolve("gst_init");
+    g_mvideo_gst_discoverer_new = (mvideo_gst_discoverer_new) gstpbutilsLibrary.resolve("gst_discoverer_new");
+    g_mvideo_gst_discoverer_start = (mvideo_gst_discoverer_start) gstpbutilsLibrary.resolve("gst_discoverer_start");
+    g_mvideo_gst_discoverer_stop = (mvideo_gst_discoverer_stop) gstpbutilsLibrary.resolve("gst_discoverer_stop");
+    g_mvideo_gst_discoverer_discover_uri_async = (mvideo_gst_discoverer_discover_uri_async) gstpbutilsLibrary.resolve("gst_discoverer_discover_uri_async");
+
+    g_mvideo_gst_discoverer_info_get_uri = (mvideo_gst_discoverer_info_get_uri) gstpbutilsLibrary.resolve("gst_discoverer_info_get_uri");
+    g_mvideo_gst_discoverer_info_get_result = (mvideo_gst_discoverer_info_get_result) gstpbutilsLibrary.resolve("gst_discoverer_info_get_result");
+    g_mvideo_gst_discoverer_info_get_misc = (mvideo_gst_discoverer_info_get_misc) gstpbutilsLibrary.resolve("gst_discoverer_info_get_misc");
+    g_mvideo_gst_structure_to_string = (mvideo_gst_structure_to_string) gstreamerLibrary.resolve("gst_structure_to_string");
+    g_mvideo_gst_discoverer_info_get_video_streams = (mvideo_gst_discoverer_info_get_video_streams) gstpbutilsLibrary.resolve("gst_discoverer_info_get_video_streams");
+    g_mvideo_gst_discoverer_info_get_audio_streams = (mvideo_gst_discoverer_info_get_audio_streams) gstpbutilsLibrary.resolve("gst_discoverer_info_get_audio_streams");
+    g_mvideo_gst_discoverer_info_get_subtitle_streams = (mvideo_gst_discoverer_info_get_subtitle_streams) gstpbutilsLibrary.resolve("gst_discoverer_info_get_subtitle_streams");
+
+    g_mvideo_gst_init(nullptr, nullptr);
 
     GError *pGErr = nullptr;
-    m_pDiscoverer = gst_discoverer_new(5 * GST_SECOND, &pGErr);
+    m_pDiscoverer = g_mvideo_gst_discoverer_new(5 * GST_SECOND, &pGErr);
     m_pLoop = g_main_loop_new(nullptr, FALSE);
 
     if (!m_pDiscoverer) {
@@ -60,10 +62,10 @@ FileFilter::FileFilter()
         g_clear_error (&pGErr);
     }
 
-    g_signal_connect_data(m_pDiscoverer, "discovered", (GCallback)discovered, &m_miType, nullptr, GConnectFlags(0));
+    g_signal_connect_data(m_pDiscoverer, "discovered", (GCallback)(discovered), &m_miType, nullptr, GConnectFlags(0));
     g_signal_connect_data(m_pDiscoverer, "finished",  (GCallback)(finished), m_pLoop, nullptr, GConnectFlags(0));
 
-    gst_discoverer_start(m_pDiscoverer);
+    g_mvideo_gst_discoverer_start(m_pDiscoverer);
 }
 
 QString FileFilter::libPath(const QString &strlib)
@@ -86,7 +88,7 @@ QString FileFilter::libPath(const QString &strlib)
 
 FileFilter::~FileFilter()
 {
-    gst_discoverer_stop(m_pDiscoverer);
+    g_mvideo_gst_discoverer_stop(m_pDiscoverer);
     g_object_unref(m_pDiscoverer);
     g_main_loop_unref(m_pLoop);
 }
@@ -218,7 +220,7 @@ FileFilter::MediaType FileFilter::typeJudgeByFFmpeg(const QUrl &url)
 
     AVFormatContext *av_ctx = nullptr;
 
-    nRet = g_mvideo_avformat_open_input(&av_ctx, url.toString().toUtf8().constData(), nullptr, nullptr);
+    nRet = g_mvideo_avformat_open_input(&av_ctx, url.toLocalFile().toUtf8().constData(), nullptr, nullptr);
 
     if(nRet < 0)
     {
@@ -253,7 +255,9 @@ FileFilter::MediaType FileFilter::typeJudgeByFFmpeg(const QUrl &url)
     } else {
         miType = MediaType::Other;
     }
-
+    if (strMimeType.contains("x-7z")){ //7z压缩包中会检测出音频流
+        miType = MediaType::Other;
+    }
     if(strFormatName.contains("Tele-typewriter") || strMimeType.startsWith("image/"))       // 排除文本文件，如果只用mimetype判断会遗漏部分原始格式文件如：h264裸流
         miType = MediaType::Other;
 
@@ -278,7 +282,7 @@ FileFilter::MediaType FileFilter::typeJudgeByGst(const QUrl &url)
 
     uri = strcpy(uri, url.toString().toUtf8().constData());
 
-    if (!gst_discoverer_discover_uri_async (m_pDiscoverer, uri)) {
+    if (!g_mvideo_gst_discoverer_discover_uri_async (m_pDiscoverer, uri)) {
       qInfo() << "Failed to start discovering URI " << uri;
       g_object_unref (m_pDiscoverer);
     }
@@ -305,8 +309,8 @@ void FileFilter::discovered(GstDiscoverer *discoverer, GstDiscovererInfo *info, 
     bool bAudio = false;
     bool bSubtitle = false;
 
-    uri = gst_discoverer_info_get_uri (info);
-    result = gst_discoverer_info_get_result (info);
+    uri = g_mvideo_gst_discoverer_info_get_uri (info);
+    result = g_mvideo_gst_discoverer_info_get_result (info);
 
     switch (result) {
       case GST_DISCOVERER_URI_INVALID:
@@ -325,8 +329,8 @@ void FileFilter::discovered(GstDiscoverer *discoverer, GstDiscovererInfo *info, 
         const GstStructure *s;
         gchar *str;
 
-        s = gst_discoverer_info_get_misc (info);
-        str = gst_structure_to_string (s);
+        s = g_mvideo_gst_discoverer_info_get_misc (info);
+        str = g_mvideo_gst_structure_to_string (s);
 
         qInfo() << "Missing plugins: " << str;
         g_free (str);
@@ -343,15 +347,15 @@ void FileFilter::discovered(GstDiscoverer *discoverer, GstDiscovererInfo *info, 
     }
 
     GList *list;
-    list = gst_discoverer_info_get_video_streams(info);
+    list = g_mvideo_gst_discoverer_info_get_video_streams(info);
     if (list) {
        bVideo = true;
     }
-    list = gst_discoverer_info_get_audio_streams(info);
+    list = g_mvideo_gst_discoverer_info_get_audio_streams(info);
     if (list) {
         bAudio = true;
     }
-    list = gst_discoverer_info_get_subtitle_streams(info);
+    list = g_mvideo_gst_discoverer_info_get_subtitle_streams(info);
     if(list) {
         bSubtitle = true;
     }
