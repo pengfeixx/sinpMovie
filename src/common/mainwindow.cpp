@@ -2710,6 +2710,7 @@ void MainWindow::updateProxyGeometry()
             QRect rfs = QRect(5, height() - TOOLBOX_HEIGHT - TOOLBOX_TOP_EXTENT - rect().top() - 5,
                         rect().width() - TOOLBOX_TOP_EXTENT, TOOLBOX_HEIGHT + TOOLBOX_TOP_EXTENT);
             m_pToolbox->setGeometry(rfs);
+            m_pToolbox->updateMircastWidget(rfs.topRight());
         }
 
         if (m_pPlaylist && !m_pPlaylist->toggling()) {
