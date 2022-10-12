@@ -1224,12 +1224,12 @@ void ToolboxProxy::setup()
             m_pPlayBtn, m_pPrevBtn, m_pNextBtn, m_pFullScreenBtn, m_pMircastBtn, m_pListBtn
         };
         QString hints[] = {
-            tr("Play/Pause"), tr("Previous"), tr("Next"),
+            tr("Play/Pause"), tr("15s backward"), tr("15s forward"),
             tr("Fullscreen"), tr("Miracast"), tr("Playlist")
         };
         QString attrs[] = {
-            tr("play"), tr("prev"), tr("next"),
-            tr("fs"), "mir", tr("list")
+            "play", "prev", "next",
+            "fs", "mir", "list"
         };
 
         for (unsigned int i = 0; i < sizeof(btns) / sizeof(btns[0]); i++) {
@@ -2410,20 +2410,6 @@ bool ToolboxProxy::eventFilter(QObject *obj, QEvent *ev)
             }
         }
     }
-
-    if(CompositingManager::get().platform() == Platform::X86) {
-        if (obj == m_pListBtn) {
-            if (ev->type() == QEvent::MouseButtonRelease) {
-                if (m_pPlaylist->state() == PlaylistWidget::State::Opened && m_pListBtn->isChecked()) {
-                    m_pListBtn->setChecked(!m_pListBtn->isChecked());
-                }
-                if (m_pPlaylist->state() == PlaylistWidget::State::Closed && !m_pListBtn->isChecked()) {
-                    m_pListBtn->setChecked(!m_pListBtn->isChecked());
-                }
-            }
-        }
-    }
-
     return QObject::eventFilter(obj, ev);
 }
 

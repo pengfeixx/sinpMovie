@@ -1946,6 +1946,7 @@ void MainWindow::requestAction(ActionFactory::ActionKind actionKind, bool bFromU
         m_pToolbox->closeAnyPopup();
 
         if (isFullScreen()) {
+            m_fsTitlebar->hide();
             setWindowState(windowState() & ~Qt::WindowFullScreen);
             if (m_bMaximized) {
                 showMaximized();

@@ -288,11 +288,12 @@ MovieInfoDialog::MovieInfoDialog(const struct PlayItemInfo &pif ,QWidget *parent
         strACodecRate = strMovieInfo.aCodeRate > 1000 ? QString(tr("%1 kbps")).arg(strMovieInfo.aCodeRate / 1000)
                  : QString(tr("%1 bps")).arg(strMovieInfo.aCodeRate);
     }
+    QString strName(tr("Name"));
     QString strBits = strMovieInfo.aDigit > 0 ? QString(tr("%1 bits").arg(strMovieInfo.aDigit)) : "-";
     QString strChannels = strMovieInfo.channels > 0 ? QString(tr("%1 channels")).arg(strMovieInfo.channels) : "-";
     QString strSamp = strMovieInfo.sampling > 0 ? QString(tr("%1hz")).arg(strMovieInfo.sampling) : "-";
 
-    addRow(tr("Type"), strMovieInfo.fileType, pFormLayout, tipLst);
+    addRow(tr("Format"), strMovieInfo.fileType, pFormLayout, tipLst);
     addRow(tr("Size"), strMovieInfo.sizeStr(), pFormLayout, tipLst);
     addRow(tr("Duration"), strDuration, pFormLayout, tipLst);
     DLabel *tmp = new DLabel;
