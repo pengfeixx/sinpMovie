@@ -13,6 +13,7 @@
 #include "utils.h"
 #include "movieinfo_dialog.h"
 #include "tip.h"
+#include "toolbutton.h"
 
 #include <DApplication>
 #include <dimagebutton.h>
@@ -612,12 +613,13 @@ PlaylistWidget::PlaylistWidget(QWidget *mw, PlayerEngine *mpv)
     DFontSizeManager::instance()->bind(_num, DFontSizeManager::T6);
     _num->setContentsMargins(20, 0, 0, 0);
 
-    m_pClearButton = new ClearButton(this);
+    m_pClearButton = new DToolButton(this);
+    m_pClearButton->setIcon(QIcon::fromTheme("dcc_clearlist"));
     m_pClearButton->setObjectName(CLEAR_PLAYLIST_BUTTON);
     m_pClearButton->setAccessibleName(CLEAR_PLAYLIST_BUTTON);
     m_pClearButton->setFocusPolicy(Qt::TabFocus);
     m_pClearButton->installEventFilter(this);
-    connect(m_pClearButton, &ClearButton::clearList, _engine, &PlayerEngine::clearPlaylist);
+    connect(m_pClearButton, &DToolButton::clicked, _engine, &PlayerEngine::clearPlaylist);
 
 
     leftLayout->addWidget(_title);
@@ -1296,68 +1298,6 @@ bool PlaylistWidget::eventFilter(QObject *obj, QEvent *event)
     }
     return QObject::eventFilter(obj, event); // standard event processing
 }
-
-ClearButton::ClearButton(QWidget *parent)
-    :QPushButton (parent)
-{
-    m_bIsHover = false;
-    m_bIsPressed = false;
-
-    setFixedSize(30, 30);
-}
-
-void ClearButton::paintEvent(QPaintEvent *pe)
-{
-    QPainter painter(this);
-    painter.setPen(Qt::NoPen);
-//    QImage img;
-    if (m_bIsPressed) {
-        painter.setBrush(QColor(0, 0, 0, 0.15 * 255));
-        m_svgRender.load(QString(":/resources/icons/clear_press.svg"));
-    } else if (m_bIsHover) {
-        painter.setBrush(QColor(0, 0, 0, 0.1 * 255));
-        m_svgRender.load(QString(":/resources/icons/clear_normal.svg"));
-    } else {
-        painter.setBrush(Qt::NoBrush);
-        m_svgRender.load(QString(":/resources/icons/clear_normal.svg"));
-    }
-
-    QPainterPath pp;
-    pp.addRoundedRect(rect(), 8, 8);
-    painter.drawPath(pp);
-
-    m_svgRender.render(&painter, QRect(9, 8, 12, 14));
-}
-
-void ClearButton::enterEvent(QEvent *event)
-{
-    m_bIsHover = true;
-    update();
-    QWidget::enterEvent(event);
-}
-
-void ClearButton::leaveEvent(QEvent *event)
-{
-    m_bIsHover = false;
-    update();
-    QWidget::leaveEvent(event);
-}
-
-void ClearButton::mousePressEvent(QMouseEvent *event)
-{
-    m_bIsPressed = true;
-    update();
-    QWidget::mousePressEvent(event);
-}
-
-void ClearButton::mouseReleaseEvent(QMouseEvent *event)
-{
-    m_bIsPressed = false;
-    emit clearList();
-    update();
-    QWidget::mouseReleaseEvent(event);
-}
-
 }
 
 #include "playlist_widget.moc"

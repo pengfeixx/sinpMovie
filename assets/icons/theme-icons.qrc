@@ -3,7 +3,6 @@
         <file>icons/dcc_delete_36px.svg</file>
         <file>icons/dcc_slider_10px.svg</file>
         <file>icons/ddc_warning_30px.svg</file>
-        <file>dark/texts/dcc_clearlist_18px.svg</file>
         <file>dark/texts/dcc_mute_36px.svg</file>
         <file>dark/texts/dcc_play_36px.svg</file>
         <file>dark/texts/dcc_suspend_36px.svg</file>
@@ -12,7 +11,6 @@
         <file>dark/texts/dcc_volumelessen_12px.svg</file>
         <file>dark/texts/dcc_volumelow_36px.svg</file>
         <file>dark/texts/dcc_volumemid_36px.svg</file>
-        <file>light/actions/dcc_clearlist_18px.svg</file>
         <file>light/actions/dcc_mute_36px.svg</file>
         <file>light/actions/dcc_suspend_36px.svg</file>
         <file>light/actions/dcc_volume_36px.svg</file>
@@ -59,6 +57,8 @@
         <file>light/actions/dcc_zoomin_36px.svg</file>
         <file>light/actions/dcc_zoomout_36px.svg</file>
         <file>dark/texts/dcc_zoomin_36px.svg</file>
+        <file>light/actions/dcc_clearlist_18px.svg</file>
+        <file>dark/texts/dcc_clearlist_18px.svg</file>
     </qresource>
     <qresource prefix="/icons/deepin/builtin/light"/>
     <qresource prefix="/icons/deepin/builtin/dark"/>

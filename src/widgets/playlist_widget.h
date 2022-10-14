@@ -19,6 +19,7 @@
 #include <QPainterPath>
 #include <QSvgWidget>
 #include <QSvgRenderer>
+#include <DToolButton>
 
 namespace Dtk {
 namespace Widget {
@@ -32,6 +33,7 @@ namespace dmr {
 
 class PlayerEngine;
 class MainWindow;
+class ToolButton;
 class ListPic: public QLabel
 {
     Q_OBJECT
@@ -75,29 +77,6 @@ protected:
     };
 private:
     QPixmap _pic;
-};
-
-class ClearButton: public QPushButton
-{
-    Q_OBJECT
-public:
-    ClearButton(QWidget *parent = 0);
-
-protected:
-    void paintEvent(QPaintEvent *pe) override;
-    void enterEvent(QEvent *event) override;
-    void leaveEvent(QEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
-
-signals:
-    void clearList();
-
-private:
-    bool m_bIsHover;
-    bool m_bIsPressed;
-
-    QSvgRenderer m_svgRender;
 };
 
 class PlayItemWidget;
@@ -196,7 +175,7 @@ private:
 
     QPropertyAnimation *paOpen ;
     QPropertyAnimation *paClose ;
-    ClearButton *m_pClearButton;
+    DToolButton *m_pClearButton;
 
     bool _toggling {false};
     bool m_bButtonFocusOut {false};       ///键盘交互标志位
