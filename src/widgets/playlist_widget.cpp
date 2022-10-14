@@ -1221,7 +1221,10 @@ void PlaylistWidget::paintEvent(QPaintEvent *pe)
     bgRect.setSize(size());
     QPainterPath pp;
     pp.addRoundedRect(bgRect, 18, 18);
-    painter.setBrush(QBrush(QColor(238, 238, 238, 0.8 * 255)));
+    if (DGuiApplicationHelper::LightType == DGuiApplicationHelper::instance()->themeType())
+        painter.setBrush(QBrush(QColor(238, 238, 238, 0.8 * 255)));
+    else
+        painter.setBrush(QBrush(QColor(32, 32, 32, 0.9 * 255)));
     painter.setPen(Qt::NoPen);
     painter.drawPath(pp);
 }
